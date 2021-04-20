@@ -1,6 +1,3 @@
-import random
-import string
-
 import numpy as np
 from astropy.io import fits
 
@@ -21,13 +18,6 @@ def image_hdu_number(hdul):
             return n
     print("image_hdu_number: Cannot find valid HDU keywords")
     raise ValueError
-
-
-def gen_id():
-    """
-    Generate random 16 character alphanumeric ID
-    """
-    return ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16))
 
 
 class Image:
@@ -89,6 +79,7 @@ class Image:
         if file_name_string is None:
             if not self.based_on_existing_file:
                 print("write_fits: Image is not based on existing file. A specified file name is required")
+                raise ValueError
             else:  # overwrite existing file
                 with fits.open(self.file_name) as hdul:
                     hdul[image_hdu_number(hdul)].data = self.data
