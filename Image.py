@@ -90,7 +90,7 @@ class Image:
             if self.based_on_existing_file:
                 with fits.open(self.file_name) as hdul:
                     hdul[image_hdu_number(hdul)].data = self.data
-                    hdul[image_hdu_number(hdul)]['EXPOSURE'] = 0
+                    hdul[image_hdu_number(hdul)].header['EXPOSURE'] = 0
                     hdul.writeto(file_name_string, overwrite=True)
             else:
                 primary_hdu = fits.PrimaryHDU()
