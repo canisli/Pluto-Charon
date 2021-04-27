@@ -1,5 +1,10 @@
+#!/usr/bin/python3
+
 import numpy as np
 from astropy.io import fits
+from astropy.table import Table
+
+from IStar import IStar
 
 
 def parse_file_name(file_name):
@@ -18,6 +23,15 @@ def image_hdu_number(hdul):
             return n
     print("image_hdu_number: Cannot find valid HDU keywords")
     raise ValueError
+
+
+def table_hdu_number(hdul):
+    """
+    Get index of TableHDU from HDUList
+    Guaranteed that it is the last HDU
+    """
+
+    return len(hdul) - 1
 
 
 class Image:
@@ -65,7 +79,7 @@ class Image:
         if not self.is_inside(x1, y1) or not self.is_inside(x2, y2):
             print("set_pixel_range: coordinate is out of range")
             raise IndexError
-        for x in range(x1, x2 + 1):  # draw a rectan
+        for x in range(x1, x2 + 1):  # draw a rectangle
             for y in range(y1, y2 + 1):
                 self.set_pixel(x, y, val)
 
@@ -90,6 +104,7 @@ class Image:
             if self.based_on_existing_file:
                 with fits.open(self.file_name) as hdul:
                     hdul[image_hdu_number(hdul)].data = self.data
+                    hdul[image_hdu_number(hdul)].header['EXPOSURE'] = 0
                     hdul.writeto(file_name_string, overwrite=True)
             else:
                 primary_hdu = fits.PrimaryHDU()
@@ -98,6 +113,22 @@ class Image:
                 new_hdul = fits.HDUList([primary_hdu, image_hdu])
                 self.file_name = parse_file_name(file_name_string)
                 new_hdul.writeto(self.file_name, overwrite=True)
+
+    def get_stars(self):
+        """
+        Returns a list of IStar objects from the HDUL's TableHDU information
+        """
+        if self.file_name is None:
+            return []
+        with fits.open(self.file_name) as hdul:
+            table = Table(hdul[table_hdu_number(hdul)].data)
+            star_data = table.as_array()
+            stars = []
+            for i in range(len(table)):
+                stars.append(
+                    IStar(star_name=star_data[i][0], x=star_data[i][1], y=star_data[i][2], magnitude=star_data[i][5],
+                          counts=star_data[i][7]))
+        return stars
 
     def __str__(self):
         if self.file_name is not None:
@@ -111,15 +142,25 @@ class Image:
         print("Destroyed " + str(self))
 
 
+def log_stars(stars, file_name):
+    f = open(file_name, "w")
+    for star in stars:
+        f.write(str(star) + "\n")
+    f.close()
+
+
 def main():
-    image = Image(file_name="hello")
-    image2 = Image(width=800, height=500)
-
-    image.set_pixel_range(0, 0, 800, 800, 33300)
-    print(image.get_pixel(50, 50))
-
-    image.write_fits("hello")
-    #  image.write_fits()
+    # image = Image(file_name="hello")
+    # image2 = Image(width=800, height=500)
+    #
+    # image.set_pixel_range(0, 0, 800, 800, 33300)
+    # print(image.get_pixel(50, 50))
+    #
+    # image.write_fits("hello")
+    # #  image.write_fits()
+    image = Image(file_name="u-aur_V.fits")
+    star_list = image.get_stars()
+    log_stars(star_list, "test.txt")
 
 
 if __name__ == "__main__":
