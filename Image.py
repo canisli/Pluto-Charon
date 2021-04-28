@@ -1,5 +1,7 @@
 #!/usr/bin/python3
+import math
 
+import matplotlib.pyplot as plt
 import numpy as np
 from astropy.io import fits
 from astropy.table import Table
@@ -32,6 +34,16 @@ def table_hdu_number(hdul):
     """
 
     return len(hdul) - 1
+
+
+def get_star_attribute(data, index):
+    if data[index] == 0.0:
+        return "N/A"
+    return data[index]
+
+
+def distance(x1, y1, x2, y2):
+    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
 
 class Image:
@@ -126,9 +138,26 @@ class Image:
             stars = []
             for i in range(len(table)):
                 stars.append(
-                    IStar(star_name=star_data[i][0], x=star_data[i][1], y=star_data[i][2], magnitude=star_data[i][5],
-                          counts=star_data[i][7]))
+                    IStar(star_name=get_star_attribute(star_data[i], 0),
+                          x=get_star_attribute(star_data[i], 1),
+                          y=get_star_attribute(star_data[i], 2),
+                          magnitude=get_star_attribute(star_data[i], 5),
+                          counts=get_star_attribute(star_data[i], 7)))
         return stars
+
+    def plot_intensity_profile(self, center_x, center_y):
+        distance_from_star = []  # x
+        values = []  # y
+        for x in range(round(center_x) - 20, round(center_x) + 20 + 1):
+            for y in range(round(center_y) - 20, round(center_y) + 20 + 1):
+                if self.is_inside(x, y):
+                    distance_from_star.append(distance(x, y, center_x, center_y))
+                    values.append(self.get_pixel(x, y))
+        plt.plot(distance_from_star, values)
+        plt.xlabel("Distance to star")
+        plt.ylabel("Pixel Value")
+        plt.savefig(self.file_name + ".png")
+        plt.show()
 
     def __str__(self):
         if self.file_name is not None:
@@ -159,8 +188,8 @@ def main():
     # image.write_fits("hello")
     # #  image.write_fits()
     image = Image(file_name="u-aur_V.fits")
-    star_list = image.get_stars()
-    log_stars(star_list, "test.txt")
+    log_stars(image.get_stars(), "u-aur_V_stars.txt")
+    image.plot_intensity_profile(1006.5, 281.26)
 
 
 if __name__ == "__main__":
