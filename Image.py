@@ -177,7 +177,7 @@ class Image:
         plt.plot(distance_from_star, values, 'o')
         plt.xlabel("Distance to star")
         plt.ylabel("Pixel Value")
-        plt.savefig(self.file_name + ".png")
+        plt.savefig(self.file_name[0:-5] + "_graph.png")
         plt.show()
 
     def __str__(self):
