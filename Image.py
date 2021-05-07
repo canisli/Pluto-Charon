@@ -37,8 +37,29 @@ def table_hdu_number(hdul):
 
 
 def get_star_attribute(data, index):
-    if data[index] == 0.0:
-        return "N/A"
+    # Check if each value is valid
+    flag = data[9]
+    if index == 0:  # star name
+        if not (flag & 0x20):
+            return "N/A"
+    if index == 1 or index == 2:  # X, Y
+        if not (flag & 0x01):
+            return "N/A"
+    if index == 3 or index == 4:  # DEC RA
+        if not (flag & 0x010):
+            return "N/A"
+    if index == 5:  # MAG
+        if not (flag & 0x02):
+            return "N/A"
+    if index == 6:  # BKGD
+        if not (flag & 0x04):
+            return "N/A"
+    if index == 7:  # COUNTS
+        if not (flag & 0x08):
+            return "N/A"
+    if index == 8:  # PHOTOMETRY
+        if not (flag & 0x40):
+            return "N/A"
     return data[index]
 
 
@@ -79,13 +100,13 @@ class Image:
         return True
 
     def get_pixel(self, x, y):
-        return self.data[y - 1][x - 1]
+        return self.data[y][x]
 
     def set_pixel(self, x, y, val):
         if not self.is_inside(x, y):
             print("set_pixel: coordinate is out of range")
             raise IndexError
-        self.data[y - 1][x - 1] = val
+        self.data[y][x] = val
 
     def set_pixel_range(self, x1, y1, x2, y2, val):
         if not self.is_inside(x1, y1) or not self.is_inside(x2, y2):
@@ -153,7 +174,7 @@ class Image:
                 if self.is_inside(x, y):
                     distance_from_star.append(distance(x, y, center_x, center_y))
                     values.append(self.get_pixel(x, y))
-        plt.plot(distance_from_star, values)
+        plt.plot(distance_from_star, values, 'o')
         plt.xlabel("Distance to star")
         plt.ylabel("Pixel Value")
         plt.savefig(self.file_name + ".png")
