@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 import math
 
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ def parse_file_name(file_name):
     return file_name
 
 
-def image_hdu_number(hdul):
+def get_image_hdu_number(hdul):
     """
     Get index of ImageHDU from HDUList
     """
@@ -23,11 +23,11 @@ def image_hdu_number(hdul):
     for n in [0, 1]:
         if 'EXPOSURE' in hdul[n].header:
             return n
-    print("image_hdu_number: Cannot find valid HDU keywords")
+    print("get_image_hdu_number: Cannot find valid HDU keywords")
     raise ValueError
 
 
-def table_hdu_number(hdul):
+def get_table_hdu_number(hdul):
     """
     Get index of TableHDU from HDUList
     Guaranteed that it is the last HDU
@@ -79,7 +79,7 @@ class Image:
             file_name = parse_file_name(file_name)
             self.file_name = file_name
             with fits.open(self.file_name) as hdul:
-                self.data = hdul[image_hdu_number(hdul)].data
+                self.data = hdul[get_image_hdu_number(hdul)].data
 
             self.height = len(self.data)
             self.width = len(self.data[0])
@@ -89,7 +89,8 @@ class Image:
             self.width = width
             self.height = height
 
-            self.data = np.zeros((height, width))  # create 2D array full of zeros
+            # create 2D array full of zeros
+            self.data = np.zeros((height, width))
         print("Created " + str(self))
 
     def is_inside(self, x, y):
@@ -125,19 +126,20 @@ class Image:
 
         if file_name_string is None:
             if not self.based_on_existing_file:
-                print("write_fits: Image is not based on existing file. A specified file name is required")
+                print(
+                    "write_fits: Image is not based on existing file. A specified file name is required")
                 raise ValueError
             else:  # overwrite existing file
                 with fits.open(self.file_name) as hdul:
-                    hdul[image_hdu_number(hdul)].data = self.data
+                    hdul[get_image_hdu_number(hdul)].data = self.data
                     hdul.writeto(self.file_name, overwrite=True)
 
         else:  # create new file
             file_name_string = parse_file_name(file_name_string)
             if self.based_on_existing_file:
                 with fits.open(self.file_name) as hdul:
-                    hdul[image_hdu_number(hdul)].data = self.data
-                    hdul[image_hdu_number(hdul)].header['EXPOSURE'] = 0
+                    hdul[get_image_hdu_number(hdul)].data = self.data
+                    hdul[get_image_hdu_number(hdul)].header['EXPOSURE'] = 0
                     hdul.writeto(file_name_string, overwrite=True)
             else:
                 primary_hdu = fits.PrimaryHDU()
@@ -147,6 +149,18 @@ class Image:
                 self.file_name = parse_file_name(file_name_string)
                 new_hdul.writeto(self.file_name, overwrite=True)
 
+
+    def get_image_hdu_value(self, name):
+        """
+        Get value of certain value from image hdu
+        """
+        with fits.open(self.file_name) as hdul:
+            try:
+                return hdul[get_image_hdu_number(hdul)].header[name.upper()]
+            except KeyError:
+                print('ERROR: Keyword \'' + str(name) + '\' not found')
+
+
     def get_stars(self):
         """
         Returns a list of IStar objects from the HDUL's TableHDU information
@@ -154,7 +168,7 @@ class Image:
         if self.file_name is None:
             return []
         with fits.open(self.file_name) as hdul:
-            table = Table(hdul[table_hdu_number(hdul)].data)
+            table = Table(hdul[get_table_hdu_number(hdul)].data)
             star_data = table.as_array()
             stars = []
             for i in range(len(table)):
@@ -166,19 +180,23 @@ class Image:
                           counts=get_star_attribute(star_data[i], 7)))
         return stars
 
+
     def plot_intensity_profile(self, center_x, center_y):
         distance_from_star = []  # x
         values = []  # y
         for x in range(round(center_x) - 20, round(center_x) + 20 + 1):
             for y in range(round(center_y) - 20, round(center_y) + 20 + 1):
                 if self.is_inside(x, y):
-                    distance_from_star.append(distance(x, y, center_x, center_y))
+                    distance_from_star.append(
+                        distance(x, y, center_x, center_y))
                     values.append(self.get_pixel(x, y))
         plt.plot(distance_from_star, values, 'o')
         plt.xlabel("Distance to star")
         plt.ylabel("Pixel Value")
         plt.savefig(self.file_name[0:-5] + "_graph.png")
         plt.show()
+
+
 
     def __str__(self):
         if self.file_name is not None:
@@ -208,9 +226,11 @@ def main():
     #
     # image.write_fits("hello")
     # #  image.write_fits()
-    image = Image(file_name="u-aur_V.fits")
-    log_stars(image.get_stars(), "u-aur_V_stars.txt")
-    image.plot_intensity_profile(1006.5, 281.26)
+    image = Image(file_name="./5-13-2021/pluto_V.fits")
+    log_stars(image.get_stars(), "./5-13-2021/pluto_V_stars.txt")
+    print(image.get_image_hdu_value("RA_NOM") + " " + image.get_image_hdu_value("DEC_NOM"))
+
+    # image.plot_intensity_profile(1006.5, 281.26)
 
 
 if __name__ == "__main__":
