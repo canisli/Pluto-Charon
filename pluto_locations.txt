@@ -2,4 +2,10 @@
 N/A located at x=636.87 and y=555.8 with magnitude N/A and counts 22790.0
 
 5-13-2021
-WIP
+Approximate: x=610.456 y=541.191
+
+5-17-2021
+N/A located at x=617.04 and y=541.05 with magnitude N/A and counts 18910.0
+
+5-19-2021
+
