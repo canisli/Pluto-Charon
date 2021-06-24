@@ -2,6 +2,7 @@
 N/A located at x=636.87 and y=555.8 with magnitude N/A and counts 22790.0
 
 5-13-2021
+N/A located at x=2173.2 and y=2193.3 with magnitude N/A and counts 9656.0 (binned 1x1)
 Approximate: x=610.456 y=541.191
 
 5-17-2021
