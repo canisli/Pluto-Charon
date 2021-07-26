@@ -1,6 +1,3 @@
-#!/usr/bin/python3
-
-
 class IStar:
     """
     Each instance of IStar describes a single star
@@ -13,6 +10,9 @@ class IStar:
         self.magnitude = magnitude
         self.counts = counts
 
+    def to_list(self):
+        return [self.star_name, self.x, self.y, self.magnitude, self.counts]
+
     def __str__(self):
-        return (str(self.star_name) + " located at x=" + str(self.x) + " and y=" + str(
-            self.y) + " with magnitude " + str(self.magnitude) + " and counts " + str(self.counts))
+        return (str(self.star_name) + ", " + str(self.x) + ", " + str(
+            self.y) + ", " + str(self.magnitude) + ", " + str(self.counts))

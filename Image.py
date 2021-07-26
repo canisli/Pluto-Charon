@@ -1,5 +1,13 @@
-#!/usr/bin/env python3
+"""
+USAGE:
+$ python3 Image.py file_path output_path
+    file_path = path to fits file
+    output_path (optional) = path to output csv file to write to
+"""
+
 import math
+import sys
+import csv
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,6 +18,8 @@ from IStar import IStar
 
 
 def parse_file_name(file_name):
+    if file_name[-3:] == ".fz":
+        return file_name
     if file_name[-5:] != ".fits":
         file_name += ".fits"
     return file_name
@@ -19,7 +29,6 @@ def get_image_hdu_number(hdul):
     """
     Get index of ImageHDU from HDUList
     """
-
     for n in [0, 1]:
         if 'EXPOSURE' in hdul[n].header:
             return n
@@ -117,6 +126,9 @@ class Image:
             for y in range(y1, y2 + 1):
                 self.set_pixel(x, y, val)
 
+    def get_average_pixel_value(self):
+        return np.average(self.data())
+
     def write_fits(self, file_name_string=None):
         """
         Overwrite existing FITS file or Create new FITS file from Image
@@ -149,7 +161,6 @@ class Image:
                 self.file_name = parse_file_name(file_name_string)
                 new_hdul.writeto(self.file_name, overwrite=True)
 
-
     def get_image_hdu_value(self, name):
         """
         Get value of certain value from image hdu
@@ -159,7 +170,6 @@ class Image:
                 return hdul[get_image_hdu_number(hdul)].header[name.upper()]
             except KeyError:
                 print('ERROR: Keyword \'' + str(name) + '\' not found')
-
 
     def get_stars(self):
         """
@@ -180,7 +190,6 @@ class Image:
                           counts=get_star_attribute(star_data[i], 7)))
         return stars
 
-
     def plot_intensity_profile(self, center_x, center_y):
         distance_from_star = []  # x
         values = []  # y
@@ -196,8 +205,6 @@ class Image:
         plt.savefig(self.file_name[0:-5] + "_graph.png")
         plt.show()
 
-
-
     def __str__(self):
         if self.file_name is not None:
             return ("Image " + str(self.file_name) + ": "
@@ -211,27 +218,27 @@ class Image:
 
 
 def log_stars(stars, file_name):
-    f = open(file_name, "w")
-    for star in stars:
-        f.write(str(star) + "\n")
-    f.close()
+    fields = ['name', 'x', 'y', 'mag', 'counts']
+    with open(file_name, 'w') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(fields)
+        for star in stars:
+            writer.writerow(star.to_list())
 
 
 def main():
-    # image = Image(file_name="hello")
-    # image2 = Image(width=800, height=500)
-    #
-    # image.set_pixel_range(0, 0, 800, 800, 33300)
-    # print(image.get_pixel(50, 50))
-    #
-    # image.write_fits("hello")
-    # #  image.write_fits()
-    image = Image(file_name="./5-13-2021/pluto_V.fits")
-    log_stars(image.get_stars(), "./5-13-2021/pluto_V_stars.txt")
-    print(image.get_image_hdu_value("RA_NOM") + " " + image.get_image_hdu_value("DEC_NOM"))
+    n = len(sys.argv)
+    if n < 2:
+        print("Invalid arguments")
+        raise Exception
+    file_path = sys.argv[1]
+    output_path = None
+    if len(sys.argv) > 2:
+        output_path = sys.argv[2]
 
-    # image.plot_intensity_profile(1006.5, 281.26)
-
+    image = Image(file_name=file_path)
+    if output_path:
+        log_stars(image.get_stars(), output_path)
 
 if __name__ == "__main__":
     main()
