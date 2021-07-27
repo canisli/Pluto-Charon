@@ -127,7 +127,7 @@ class Image:
                 self.set_pixel(x, y, val)
 
     def get_average_pixel_value(self):
-        return np.average(self.data())
+        return np.average(self.data)
 
     def write_fits(self, file_name_string=None):
         """
@@ -217,13 +217,15 @@ class Image:
         print("Destroyed " + str(self))
 
 
-def log_stars(stars, file_name):
-    fields = ['name', 'x', 'y', 'mag', 'counts']
-    with open(file_name, 'w') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(fields)
-        for star in stars:
-            writer.writerow(star.to_list())
+def log_stars(stars, out_path):
+    output = {"name": [], "x": [], "y": [], "mag": [], 'counts': []}
+    for star in stars:
+        output["name"].append(star.star_name)
+        output["x"].append(star.x)
+        output["y"].append(star.y)
+        output["mag"].append(star.magnitude)
+        output["counts"].append(star.counts)
+    Table(output).write(out_path, format="csv", overwrite=True)
 
 
 def main():
@@ -231,10 +233,10 @@ def main():
     if n < 2:
         print("Invalid arguments")
         raise Exception
-    file_path = sys.argv[1]
+    file_path = "./data/" + sys.argv[1] + "/pluto_V.fits"
     output_path = None
     if len(sys.argv) > 2:
-        output_path = sys.argv[2]
+        output_path = "./out/" + sys.argv[2] + ".csv"
 
     image = Image(file_name=file_path)
     if output_path:
