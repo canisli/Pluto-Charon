@@ -14,7 +14,10 @@ class IStar:
             self.star_name = table_row['name']
             self.x = float(table_row['x'])
             self.y = float(table_row['y'])
-            self.magnitude = float(table_row['mag'])
+            try:
+                self.magnitude = float(table_row['mag'])
+            except ValueError:
+                self.magnitude = table_row['mag']
             self.counts = float(table_row['counts'])
 
     def to_list(self):

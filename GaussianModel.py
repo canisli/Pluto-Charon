@@ -9,48 +9,43 @@ import numpy as np
 from IStar import IStar
 from Image import Image, get_image_hdu_number
 
-def psf(params, x, y):
-    return (
-        params["A"]
-        * math.exp(-((x**2 / (2 * params["sigma_x2"])) + (y**2 / (2 * params["sigma_y2"])))) + params["B"])
+error_threshold =  0.0 # maximum change in total residual error
 
-def psf_error(params, xy, data):
+def psf(params, x, y):
+    return params["A"] * math.exp(-((x**2 / (2 * params["sigma_x2"])) + (y**2 / (2 * params["sigma_y2"])))) + params["B"]
+
+def psf_error(params, xy, data, image, center_x, center_y):
     n = len(data)
-    # print(len(xy),len(xy[0]),len(xy[1]))
     errors = []
     for i in range(n):
-        errors.append(data[i] - psf(params, xy[0][i], xy[1][i]))
-
-    # print("xs",len(xs[0]),type(xs[0][0]))
-    # print("ys",len(ys),type(ys[0]))
+        dx = xy[0][i]
+        dy = xy[1][i]
+        errors.append(image.get_pixel(int(center_x - dx), int(center_y - dy)) - psf(params, dx, dy))
     return errors
+
 
 class GaussianModel:
     def __init__(self, center_x, center_y, image, fwhm, average_pixel_value):
         self.center_x = center_x
         self.center_y = center_y
         self.image = image
-        self.fwhm = fwhm
-        self.average_pixel_value = average_pixel_value
-        print(image.get_pixel(639, 868))
-        self.a = np.max(
-            [
+
+        a = np.max(
+            [ # four pixels around center
                 image.get_pixel(math.floor(center_x), math.floor(center_y)),
                 image.get_pixel(math.ceil(center_x), math.floor(center_y)),
                 image.get_pixel(math.floor(center_x), math.ceil(center_y)),
                 image.get_pixel(math.ceil(center_x), math.ceil(center_y)),
             ]
         )
-
-        self.b = average_pixel_value
-        self.sigma_x2 = self.sigma_y2 = (fwhm/ 2.355) ** 2
+        sigma2 = (fwhm/2.355)**2
 
         self.LMparams = Parameters()
-        self.LMparams.add("A", value=self.a)
-        self.LMparams.add("B", value=self.b)
-        self.LMparams.add("sigma_x2", value=self.sigma_x2)
-        self.LMparams.add("sigma_y2", value=self.sigma_y2)
-
+        self.LMparams.add("A", value=a)
+        self.LMparams.add("B", value=average_pixel_value)
+        self.LMparams.add("sigma_x2", value=sigma2)
+        self.LMparams.add("sigma_y2", value=sigma2)
+        self.prev_residual_error = -math.inf
 
     def get_sigma(self):
         total_residual_error = 0
@@ -59,10 +54,15 @@ class GaussianModel:
         ys = []
         data = []
 
+        a = self.LMparams["A"].value
+        b = self.LMparams["B"].value
+        sigma_x2 = self.LMparams["sigma_x2"].value
+        sigma_y2 = self.LMparams["sigma_y2"].value
+
         for x in range(int(round(self.center_x)) - 10, int(round(self.center_x)) + 10):
             for y in range(int(round(self.center_y)) - 10, int(round(self.center_y)) + 10):
-                dx = self.center_x - x
-                dy = self.center_y - y
+                dx = self.center_x - x # x = center_x - dx
+                dy = self.center_y - y # y = center_y - dy
                 val = psf(self.LMparams,dx, dy)
 
                 xs.append(dx)
@@ -70,23 +70,28 @@ class GaussianModel:
                 data.append(val)
 
                 g = self.image.get_pixel(x, y)
-                exp_term = (val - self.b) / self.a
+                exp_term = (val - b) / a
 
-                total_residual_error += val ** 2
+                total_residual_error += (self.image.get_pixel(x,y) - val) ** 2
                 dsda += -2 * (g - val) * exp_term
                 dsdb += -2 * (g - val) * 1
                 dsdsigma_x2 += (
-                    -2 * (g - val) * self.a * x ** 2 * (exp_term) / self.sigma_x2 ** 3
+                    -2 * (g - val) * a * x ** 2 * (exp_term) / sigma_x2 ** 3
                 )
                 dsdsigma_y2 += (
-                    -2 * (g - val) * self.a * y ** 2 *(exp_term) / self.sigma_y2 ** 3
+                    -2 * (g - val) * a * y ** 2 *(exp_term) / sigma_y2 ** 3
                 )
+        # print(total_residual_error, self.prev_residual_error, total_residual_error - self.prev_residual_error)
+        # print(dsda,dsdb,dsdsigma_x2,dsdsigma_y2)
+        if abs(total_residual_error - self.prev_residual_error) <= error_threshold:
+            return self.LMparams
+        self.prev_residual_error = total_residual_error
 
-        LMFitmin = Minimizer(psf_error, self.LMparams, fcn_args=([xs, ys], data))
+        LMFitmin = Minimizer(psf_error, self.LMparams, fcn_args=([xs, ys], data, self.image, self.center_x, self.center_y))
         LMFitResult = LMFitmin.minimize(method="least_square")
-        print(LMFitResult)
-        report_fit(LMFitResult)
-
+        print(LMFitResult.params)
+        self.LMparams = LMFitResult.params
+        return self.get_sigma()
 
 
 def main():
@@ -102,11 +107,22 @@ def main():
         fwhm_arc / hdul[get_image_hdu_number(hdul)].header["CDELT1"]
     )  # fwhm in pixels
 
-    # arbitrary star
-    print(starlist[1])
-    star = IStar(table_row=starlist[0])
-    gm = GaussianModel(star.x, star.y, image, fwhm, image.get_average_pixel_value())
-    gm.get_sigma()
+    all_params = {"star": [], "A": [], "B": [], "sigma_x2": [], "sigma_y2": []}
+
+    for i in range(len(starlist)):
+        i = 135 # problematic star
+        print("<"+str(i+1)+">\n", str(starlist[i]))
+        star = IStar(table_row=starlist[i])
+        gm = GaussianModel(star.x, star.y, image, fwhm, image.get_average_pixel_value())
+        params = gm.get_sigma()
+        # print(params)
+        all_params["star"].append(star.star_name)
+        all_params["A"].append(params["A"].value)
+        all_params["B"].append(params["B"].value)
+        all_params["sigma_x2"].append(params["sigma_x2"].value)
+        all_params["sigma_y2"].append(params["sigma_y2"].value)
+
+    Table(all_params).write("yeet.csv", format="csv", overwrite=True)
 
 
 if __name__ == "__main__":
