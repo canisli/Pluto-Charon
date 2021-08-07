@@ -1,4 +1,16 @@
+"""
+USAGE:
+$ python3 GaussianModel.py date output_path
+    date = MM-DD-YYYY date in which image was taken (this is the name of the data folder)
+    output_path = path to output csv file to write to
+or
+$ python3 GaussianModel.py input_path
+    - read from existing values
+    input_path = path to csv file previously generated from above usage
+"""
+
 import math
+import sys
 
 from scipy.optimize import curve_fit, least_squares
 from lmfit import minimize, Minimizer, Parameters, Parameter, report_fit
@@ -48,6 +60,9 @@ class GaussianModel:
         self.prev_residual_error = -math.inf
 
     def get_sigma(self):
+        """
+        Returns all four params {A,B,sigma_x2,sigma_y2} obtained from fitting
+        """
         total_residual_error = 0
         dsda = dsdb = dsdsigma_x2 = dsdsigma_y2 = 0
         xs = []
@@ -93,36 +108,69 @@ class GaussianModel:
         self.LMparams = LMFitResult.params
         return self.get_sigma()
 
+def distance(x1, x2, y1, y2):
+    return math.sqrt((x1-x2)**2 + (y1-y2)**2)
+
+def get_sigmas_from_file(file_path):
+    fittings = Table.read(file_path, format="csv")
+    print("sigma_x2", str(np.average(fittings["sigma_x2"])))
+    print("sigma_y2", str(np.average(fittings["sigma_y2"])))
+
 
 def main():
-    path = "./data/" + "4-25-2021" + "/pluto_V.fits"
-    starlist_path = "./out/" + "4-25-2021.csv"
-    starlist = Table.read(starlist_path, format="csv")
+    n = len(sys.argv)
+    if n == 2:
+        fittings_path = "./out/Gaussian/" + sys.argv[1] +".csv"
+        get_sigmas_from_file(fittings_path)
+    else:
+        path = "./data/" + sys.argv[1] + "/pluto_V.fits"
+        starlist_path = "./out/Starlist/" + sys.argv[1] + ".csv"
+        starlist = Table.read(starlist_path, format="csv")
+        output_path = "./out/Gaussian/"+sys.argv[2] + ".csv"
 
-    image = Image(path)
-    hdul = fits.open(path)
+        image = Image(path)
+        hdul = fits.open(path)
 
-    fwhm_arc = 3.5  # full width half maximum in arcseconds
-    fwhm = (
-        fwhm_arc / hdul[get_image_hdu_number(hdul)].header["CDELT1"]
-    )  # fwhm in pixels
+        fwhm_arc = 3.5  # full width half maximum in arcseconds
+        fwhm = (
+            fwhm_arc / hdul[get_image_hdu_number(hdul)].header["CDELT1"]
+        )  # fwhm in pixels
 
-    all_params = {"star": [], "A": [], "B": [], "sigma_x2": [], "sigma_y2": []}
+        all_params = {"star": [], "A": [], "B": [], "sigma_x2": [], "sigma_y2": []}
 
-    for i in range(len(starlist)):
-        i = 135 # problematic star
-        print("<"+str(i+1)+">\n", str(starlist[i]))
-        star = IStar(table_row=starlist[i])
-        gm = GaussianModel(star.x, star.y, image, fwhm, image.get_average_pixel_value())
-        params = gm.get_sigma()
-        # print(params)
-        all_params["star"].append(star.star_name)
-        all_params["A"].append(params["A"].value)
-        all_params["B"].append(params["B"].value)
-        all_params["sigma_x2"].append(params["sigma_x2"].value)
-        all_params["sigma_y2"].append(params["sigma_y2"].value)
+        skip_count = 0
 
-    Table(all_params).write("yeet.csv", format="csv", overwrite=True)
+        for i in range(len(starlist)):
+            star = IStar(table_row=starlist[i])
+            print("<"+str(i+1)+">\n", str(starlist[i]))
+            skip = False
+            # ignore fake stars
+            if not isinstance(star.counts, str):
+                if star.counts < 0:
+                    skip = True
+            for j in range(len(starlist)):
+                # ignore stars that are within 25 pixels of the current star to avoid PSF issuse
+                star2 = IStar(table_row=starlist[j])
+                if i!=j and distance(star.x, star2.x, star.y, star2.y) < 25:
+                    skip = True
+            if skip:
+                print("SKIPPED")
+                skip_count+=1
+                continue
+            gm = GaussianModel(star.x, star.y, image, fwhm, image.get_average_pixel_value())
+            params = gm.get_sigma()
+            # print(params)
+            all_params["star"].append(star.star_name)
+            all_params["A"].append(params["A"].value)
+            all_params["B"].append(params["B"].value)
+            all_params["sigma_x2"].append(params["sigma_x2"].value)
+            all_params["sigma_y2"].append(params["sigma_y2"].value)
+
+        print("Number of stars successfully analyzed:", len(starlist) - skip_count)
+        print("sigma_x2", str(np.average(all_params["sigma_x2"])))
+        print("sigma_y2", str(np.average(all_params["sigma_y2"])))
+
+        Table(all_params).write(output_path, format="csv", overwrite=True)
 
 
 if __name__ == "__main__":
