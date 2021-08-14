@@ -17,6 +17,7 @@ from lmfit import minimize, Minimizer, Parameters, Parameter, report_fit
 from astropy.io import fits
 from astropy.table import Table
 import numpy as np
+import matplotlib.pyplot as plt
 
 from IStar import IStar
 from Image import Image, get_image_hdu_number
@@ -113,6 +114,18 @@ def distance(x1, x2, y1, y2):
 
 def get_sigmas_from_file(file_path):
     fittings = Table.read(file_path, format="csv")
+    center_dist = []
+    center_x, center_y = 635, 526 # need to parameterize
+    for x, y in zip(fittings["x"], fittings["y"]): # iterate in parallel
+        center_dist.append(math.sqrt((x-center_x)**2+(y-center_y)**2))
+    print(center_dist, fittings["sigma_x2"])
+    plt.title("Sigma_x2 as function from distance from center")
+    plt.scatter(np.array(center_dist), np.array(fittings["sigma_x2"]), linestyle="None")
+    plt.show()
+    plt.figure()
+    plt.title("Sigma_y2 as function from distance from center")
+    plt.scatter(np.array(center_dist), np.array(fittings["sigma_y2"]), linestyle="None")
+    plt.show()
     print("sigma_x2", str(np.average(fittings["sigma_x2"])))
     print("sigma_y2", str(np.average(fittings["sigma_y2"])))
 
@@ -136,7 +149,7 @@ def main():
             fwhm_arc / hdul[get_image_hdu_number(hdul)].header["CDELT1"]
         )  # fwhm in pixels
 
-        all_params = {"star": [], "A": [], "B": [], "sigma_x2": [], "sigma_y2": []}
+        all_params = {"star": [], "A": [], "B": [], "sigma_x2": [], "sigma_y2": [], "x": [], "y":[]}
 
         skip_count = 0
 
@@ -165,6 +178,8 @@ def main():
             all_params["B"].append(params["B"].value)
             all_params["sigma_x2"].append(params["sigma_x2"].value)
             all_params["sigma_y2"].append(params["sigma_y2"].value)
+            all_params["x"].append(star.x)
+            all_params["y"].append(star.y)
 
         print("Number of stars successfully analyzed:", len(starlist) - skip_count)
         print("sigma_x2", str(np.average(all_params["sigma_x2"])))
