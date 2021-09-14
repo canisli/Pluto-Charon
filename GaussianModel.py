@@ -36,6 +36,20 @@ def psf_error(params, xy, data, image, center_x, center_y):
         errors.append(image.get_pixel(int(center_x - dx), int(center_y - dy)) - psf(params, dx, dy))
     return errors
 
+def pc_psf(params, x_p, y_p, x_c, y_c):
+    return params["a_c"] * math.exp(-((x_c**2 / (2 * params["sigma_x2"])) + (y_c**2 / (2 * params["sigma_y2"])))) + params["a_p"] * math.exp(-((x_p**2 / (2 * params["sigma_x2"])) + (y_p**2 / (2 * params["sigma_y2"])))) + params["B"]
+
+def pc_psf_error(params, pcxy, data, image, center_x, center_y):
+    # pcxy = (x_ps, y_ps, x_cs, y_cs)
+    n = len(data)
+    errors = []
+    for i in range(n):
+        x_p = pcxy[0][i]
+        y_p = pcxy[1][i]
+        x_c = pcxy[2][i]
+        y_c = pcxy[3][i]
+        errors.append(image.get_pixel(int(params["x_0p"] - x_p), int(params["y_0p"] - y_p)) - pc_psf(params, x_p, y_p, x_c, y_c))
+    return errors
 
 class GaussianModel:
     def __init__(self, center_x, center_y, image, fwhm, average_pixel_value):
@@ -60,7 +74,7 @@ class GaussianModel:
         self.LMparams.add("sigma_y2", value=sigma2)
         self.prev_residual_error = -math.inf
 
-    def get_sigma(self):
+    def get_params(self):
         """
         Returns all four params {A,B,sigma_x2,sigma_y2} obtained from fitting
         """
@@ -107,12 +121,77 @@ class GaussianModel:
         LMFitResult = LMFitmin.minimize(method="least_square")
         print(LMFitResult.params)
         self.LMparams = LMFitResult.params
-        return self.get_sigma()
+        return self.get_params()
+
+class PlutoCharonGaussian():
+    def __init__(self, a_p, a_c, b, sigma_x2, sigma_y2, image, pluto_x, pluto_y, charon_x, charon_y, center_x, center_y):
+        self.sigma_x2 = sigma_x2
+        self.sigma_y2 = sigma_y2
+        self.image = image
+        self.pluto_x = pluto_x
+        self.pluto_y = pluto_y
+        self.charon_x = charon_x
+        self.charon_y = charon_y
+        self.center_x = center_x # center of blob identified by find stars
+        self.center_y = center_y
+        self.a_p = a_p
+        self.a_c = a_c
+        self.b = b
+        
+        self.LMparams = Parameters()
+        self.LMparams.add("sigma_x2", value=sigma_x2)
+        self.LMparams.add("sigma_y2", value=sigma_y2)
+        self.LMparams.add("x_0p", value = pluto_x)
+        self.LMparams.add("y_0p", value = pluto_y)
+        self.LMparams.add("x_0c", value = charon_x)
+        self.LMparams.add("y_0c", value = charon_y)
+        self.LMparams.add("a_p", value = a_p)
+        self.LMparams.add("a_c", value = a_c)
+        self.LMparams.add("b", value = b)
+        self.prev_residual_error = -math.inf
+    
+    def get_params(self):
+        """
+        Returns all seven params {x_0c, y_0c, x_0p,y_0p, A_p, A_c, B}
+        """
+        total_residual_error = 0
+        x_ps = [], y_ps = []
+        x_cs = [], y_cs = []
+        data = []
+        sigma_x2 = self.LMparams["sigma_x2"].value
+        sigma_y2 = self.LMparams["sigma_y2"].value
+        x_0p = self.LMparams["x_0p"].value
+        y_0p = self.LMparams["y_0p"].value
+        x_0c = self.LMparams["x_0c"].value
+        y_0c = self.LMparams["y_0c"].value
+
+        for x in range(int(round(self.center_x)) - 10, int(round(self.center_x)) + 10):
+            for y in range(int(round(self.center_y)) - 10, int(round(self.center_y)) + 10):
+                x_p = x_0p - x
+                y_p = y_0p - y
+                x_c = x_0c - x
+                y_c = y_0c - y
+                val = pc_psf(self.LMparams, x_p, y_p, x_c, y_c)
+
+                x_ps.append(x_p)
+                y_ps.append(y_p)
+                x_cs.append(x_c)
+                y_cs.append(y_c)
+                data.append(val)
+
+                total_residual_error += (self.image.get_pixel(x,y) - val) ** 2
+        
+        if abs(total_residual_error - self.prev_residual_error) <= error_threshold:
+            return self.LMparams
+        self.prev_residual_error = total_residual_error
+
+        LMFitmin = Minimizer()
+
 
 def distance(x1, x2, y1, y2):
     return math.sqrt((x1-x2)**2 + (y1-y2)**2)
 
-def get_sigmas_from_file(file_path):
+def get_params_from_file(file_path):
     fittings = Table.read(file_path, format="csv")
     center_dist = []
     center_x, center_y = 635, 526 # need to parameterize
@@ -134,7 +213,7 @@ def main():
     n = len(sys.argv)
     if n == 2:
         fittings_path = "./out/Gaussian/" + sys.argv[1] +".csv"
-        get_sigmas_from_file(fittings_path)
+        get_params_from_file(fittings_path)
     else:
         path = "./data/" + sys.argv[1] + "/pluto_V.fits"
         starlist_path = "./out/Starlist/" + sys.argv[1] + ".csv"
@@ -171,7 +250,7 @@ def main():
                 skip_count+=1
                 continue
             gm = GaussianModel(star.x, star.y, image, fwhm, image.get_average_pixel_value())
-            params = gm.get_sigma()
+            params = gm.get_params()
             # print(params)
             all_params["star"].append(star.star_name)
             all_params["A"].append(params["A"].value)
