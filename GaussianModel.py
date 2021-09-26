@@ -254,8 +254,8 @@ class PlutoCharonGaussian:
 
 
 def locate_pluto_charon(image, counts, center_x, center_y, sigma_x2, sigma_y2, b):
-    a_p = 5 / 6 * counts
-    a_c = a_p / 5
+    a_p = 5 / 6 * counts # guess as 5/6 the brightness of pluto charon blob
+    a_c = a_p / 5 # 1/5 of a_p
     scale = 2
     dx_p = np.array([1, 1, -1, -1]) * scale
     dy_p = np.array([1, -1, -1, 1]) * scale
