@@ -51,19 +51,9 @@ def psf_error(params, xy, data, image, center_x, center_y):
 def pc_psf(params, x_p, y_p, x_c, y_c, sigma_x2, sigma_y2):
     return (
         params["a_c"]
-        * math.exp(
-            -(
-                (x_c ** 2 / (2 * sigma_x2))
-                + (y_c ** 2 / (2 * sigma_y2))
-            )
-        )
+        * math.exp(-((x_c ** 2 / (2 * sigma_x2)) + (y_c ** 2 / (2 * sigma_y2))))
         + params["a_p"]
-        * math.exp(
-            -(
-                (x_p ** 2 / (2 * sigma_x2))
-                + (y_p ** 2 / (2 * sigma_y2))
-            )
-        )
+        * math.exp(-((x_p ** 2 / (2 * sigma_x2)) + (y_p ** 2 / (2 * sigma_y2))))
         + params["B"]
     )
 
@@ -83,8 +73,10 @@ def pc_psf_error(params, pcxy, data, image, sigma_x2, sigma_y2):
         print("y_0p", str(params["y_0p"].value))
         print(int(params["x_0p"].value - x_p), int(params["y_0p"].value - y_p))
         errors.append(
-            image.get_pixel(int(params["x_0p"].value - x_p), int(params["y_0p"].value - y_p))
-            - pc_psf(params, x_p, y_p, x_c, y_c,sigma_x2, sigma_y2)
+            image.get_pixel(
+                int(params["x_0p"].value - x_p), int(params["y_0p"].value - y_p)
+            )
+            - pc_psf(params, x_p, y_p, x_c, y_c, sigma_x2, sigma_y2)
         )
     return errors
 
@@ -219,6 +211,7 @@ class PlutoCharonGaussian:
         y_0p = self.LMparams["y_0p"].value
         x_0c = self.LMparams["x_0c"].value
         y_0c = self.LMparams["y_0c"].value
+        # call psf on 20x20 box around center of pluto charon blob
         for x in range(int(round(self.center_x)) - 10, int(round(self.center_x)) + 10):
             for y in range(
                 int(round(self.center_y)) - 10, int(round(self.center_y)) + 10
@@ -236,7 +229,7 @@ class PlutoCharonGaussian:
                 data.append(val)
 
                 total_residual_error += (self.image.get_pixel(x, y) - val) ** 2
-
+        # keep going until no residual error
         if abs(total_residual_error - self.prev_residual_error) <= error_threshold:
             return self.LMparams
         self.prev_residual_error = total_residual_error
@@ -253,7 +246,7 @@ class PlutoCharonGaussian:
             ),
         )
         print("Before")
-        LMFitResult = LMFitmin.minimize(method="least_square")
+        LMFitResult = LMFitmin.minimize(method="least_square")  # code breaks here!
         print("After")
         print(LMFitResult.params)
         self.LMparams = LMFitResult.params
@@ -268,7 +261,7 @@ def locate_pluto_charon(image, counts, center_x, center_y, sigma_x2, sigma_y2, b
     dy_p = np.array([1, -1, -1, 1]) * scale
     dx_c = np.array([-1, 1, 1, -1]) * scale
     dy_c = np.array([-1, -1, -1, -1]) * scale
-    for i in range(len(dx_p)):
+    for i in range(len(dx_p)): # test the four locations as per the convergence diagram
         pluto_charon = PlutoCharonGaussian(
             image=image,
             b=b,
@@ -284,8 +277,6 @@ def locate_pluto_charon(image, counts, center_x, center_y, sigma_x2, sigma_y2, b
             center_y=center_y,
         )
         params = pluto_charon.get_params()
-        print("Hello")
-
 
         print(params["x_0p"].value, params["y_0p"].value)
         print(params["x_0c"].value, params["y_0c"].value)
