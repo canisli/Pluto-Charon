@@ -12,7 +12,6 @@ $ python3 GaussianModel.py input_path
 import math
 import sys
 
-from scipy.optimize import curve_fit, least_squares
 from lmfit import minimize, Minimizer, Parameters, Parameter, report_fit
 from astropy.io import fits
 from astropy.table import Table
@@ -22,10 +21,12 @@ import matplotlib.pyplot as plt
 from IStar import IStar
 from Image import Image, get_image_hdu_number
 
-error_threshold =  0.0 # maximum change in total residual error
+error_threshold = 0.0  # maximum change in total residual error
+
 
 def psf(params, x, y):
     return params["A"] * math.exp(-((x**2 / (2 * params["sigma_x2"])) + (y**2 / (2 * params["sigma_y2"])))) + params["B"]
+
 
 def psf_error(params, xy, data, image, center_x, center_y):
     n = len(data)
@@ -33,11 +34,14 @@ def psf_error(params, xy, data, image, center_x, center_y):
     for i in range(n):
         dx = xy[0][i]
         dy = xy[1][i]
-        errors.append(image.get_pixel(int(center_x - dx), int(center_y - dy)) - psf(params, dx, dy))
+        errors.append(image.get_pixel(int(center_x - dx),
+                      int(center_y - dy)) - psf(params, dx, dy))
     return errors
+
 
 def pc_psf(params, x_p, y_p, x_c, y_c):
     return params["a_c"] * math.exp(-((x_c**2 / (2 * params["sigma_x2"])) + (y_c**2 / (2 * params["sigma_y2"])))) + params["a_p"] * math.exp(-((x_p**2 / (2 * params["sigma_x2"])) + (y_p**2 / (2 * params["sigma_y2"])))) + params["B"]
+
 
 def pc_psf_error(params, pcxy, data, image, center_x, center_y):
     # pcxy = (x_ps, y_ps, x_cs, y_cs)
@@ -48,8 +52,10 @@ def pc_psf_error(params, pcxy, data, image, center_x, center_y):
         y_p = pcxy[1][i]
         x_c = pcxy[2][i]
         y_c = pcxy[3][i]
-        errors.append(image.get_pixel(int(params["x_0p"] - x_p), int(params["y_0p"] - y_p)) - pc_psf(params, x_p, y_p, x_c, y_c))
+        errors.append(image.get_pixel(int(
+            params["x_0p"] - x_p), int(params["y_0p"] - y_p)) - pc_psf(params, x_p, y_p, x_c, y_c))
     return errors
+
 
 class GaussianModel:
     def __init__(self, center_x, center_y, image, fwhm, average_pixel_value):
@@ -58,7 +64,7 @@ class GaussianModel:
         self.image = image
 
         a = np.max(
-            [ # four pixels around center
+            [  # four pixels around center
                 image.get_pixel(math.floor(center_x), math.floor(center_y)),
                 image.get_pixel(math.ceil(center_x), math.floor(center_y)),
                 image.get_pixel(math.floor(center_x), math.ceil(center_y)),
@@ -91,9 +97,9 @@ class GaussianModel:
 
         for x in range(int(round(self.center_x)) - 10, int(round(self.center_x)) + 10):
             for y in range(int(round(self.center_y)) - 10, int(round(self.center_y)) + 10):
-                dx = self.center_x - x # x = center_x - dx
-                dy = self.center_y - y # y = center_y - dy
-                val = psf(self.LMparams,dx, dy)
+                dx = self.center_x - x  # x = center_x - dx
+                dy = self.center_y - y  # y = center_y - dy
+                val = psf(self.LMparams, dx, dy)
 
                 xs.append(dx)
                 ys.append(dy)
@@ -102,14 +108,14 @@ class GaussianModel:
                 g = self.image.get_pixel(x, y)
                 exp_term = (val - b) / a
 
-                total_residual_error += (self.image.get_pixel(x,y) - val) ** 2
+                total_residual_error += (self.image.get_pixel(x, y) - val) ** 2
                 dsda += -2 * (g - val) * exp_term
                 dsdb += -2 * (g - val) * 1
                 dsdsigma_x2 += (
                     -2 * (g - val) * a * x ** 2 * (exp_term) / sigma_x2 ** 3
                 )
                 dsdsigma_y2 += (
-                    -2 * (g - val) * a * y ** 2 *(exp_term) / sigma_y2 ** 3
+                    -2 * (g - val) * a * y ** 2 * (exp_term) / sigma_y2 ** 3
                 )
         # print(total_residual_error, self.prev_residual_error, total_residual_error - self.prev_residual_error)
         # print(dsda,dsdb,dsdsigma_x2,dsdsigma_y2)
@@ -117,11 +123,33 @@ class GaussianModel:
             return self.LMparams
         self.prev_residual_error = total_residual_error
 
-        LMFitmin = Minimizer(psf_error, self.LMparams, fcn_args=([xs, ys], data, self.image, self.center_x, self.center_y))
+        LMFitmin = Minimizer(psf_error, self.LMparams, fcn_args=(
+            [xs, ys], data, self.image, self.center_x, self.center_y))
         LMFitResult = LMFitmin.minimize(method="least_square")
         print(LMFitResult.params)
         self.LMparams = LMFitResult.params
         return self.get_params()
+
+    def locate_pluto_charon(self):
+        center_x = self.center_x
+        center_y = self.center_y
+        sigma_x2 = self.LMparams["sigma_x2"].value
+        sigma_y2 = self.LMparams["sigma_y2"].value
+        a_p = 0
+        a_c = a_p / 5
+        dx_p = [1, 1, -1, -1]
+        dy_p = [1, -1, -1, 1]
+        dx_c = [-1, 1, 1, -1]
+        dy_c = [-1, -1, -1, -1]
+        for i in range(len(dx_p)):
+            pluto_charon = PlutoCharonGaussian(a_p=a_p, a_c=a_c,
+                                               sigma_x2=sigma_x2, sigma_y2=sigma_y2,
+                                               pluto_x=center_x + dx_p[i], pluto_y=center_y + dy_p[i],
+                                               charon_x=center_x + dx_c[i], charon_y=center_y + dy_c[i],
+                                               center_x=center_x, center_y=center_y)
+            params = pluto_charon.get_params()
+        return (0)
+
 
 class PlutoCharonGaussian():
     def __init__(self, a_p, a_c, b, sigma_x2, sigma_y2, image, pluto_x, pluto_y, charon_x, charon_y, center_x, center_y):
@@ -132,24 +160,24 @@ class PlutoCharonGaussian():
         self.pluto_y = pluto_y
         self.charon_x = charon_x
         self.charon_y = charon_y
-        self.center_x = center_x # center of blob identified by find stars
+        self.center_x = center_x  # center of blob identified by find stars
         self.center_y = center_y
         self.a_p = a_p
         self.a_c = a_c
         self.b = b
-        
+
         self.LMparams = Parameters()
         self.LMparams.add("sigma_x2", value=sigma_x2)
         self.LMparams.add("sigma_y2", value=sigma_y2)
-        self.LMparams.add("x_0p", value = pluto_x)
-        self.LMparams.add("y_0p", value = pluto_y)
-        self.LMparams.add("x_0c", value = charon_x)
-        self.LMparams.add("y_0c", value = charon_y)
-        self.LMparams.add("a_p", value = a_p)
-        self.LMparams.add("a_c", value = a_c)
-        self.LMparams.add("b", value = b)
+        self.LMparams.add("x_0p", value=pluto_x)
+        self.LMparams.add("y_0p", value=pluto_y)
+        self.LMparams.add("x_0c", value=charon_x)
+        self.LMparams.add("y_0c", value=charon_y)
+        self.LMparams.add("a_p", value=a_p)
+        self.LMparams.add("a_c", value=a_c)
+        self.LMparams.add("b", value=b)
         self.prev_residual_error = -math.inf
-    
+
     def get_params(self):
         """
         Returns all seven params {x_0c, y_0c, x_0p,y_0p, A_p, A_c, B}
@@ -179,31 +207,43 @@ class PlutoCharonGaussian():
                 y_cs.append(y_c)
                 data.append(val)
 
-                total_residual_error += (self.image.get_pixel(x,y) - val) ** 2
-        
+                total_residual_error += (self.image.get_pixel(x, y) - val) ** 2
+
         if abs(total_residual_error - self.prev_residual_error) <= error_threshold:
             return self.LMparams
         self.prev_residual_error = total_residual_error
 
         LMFitmin = Minimizer()
+        LMFitResult = LMFitmin.minimize(method="least_square")
+        print(LMFitResult.params)
+        self.LMparams = LMFitResult.params
+        return self.get_params()
 
 
 def distance(x1, x2, y1, y2):
     return math.sqrt((x1-x2)**2 + (y1-y2)**2)
 
+
 def get_params_from_file(file_path):
     fittings = Table.read(file_path, format="csv")
+    center_x, center_y = 635, 526  # need to parameterize
+    plot_params(fittings, center_x, center_y)
+    return fittings
+
+
+def plot_params(fittings, center_x, center_y):
     center_dist = []
-    center_x, center_y = 635, 526 # need to parameterize
-    for x, y in zip(fittings["x"], fittings["y"]): # iterate in parallel
+    for x, y in zip(fittings["x"], fittings["y"]):  # iterate in parallel
         center_dist.append(math.sqrt((x-center_x)**2+(y-center_y)**2))
     print(center_dist, fittings["sigma_x2"])
     plt.title("Sigma_x2 as function from distance from center")
-    plt.scatter(np.array(center_dist), np.array(fittings["sigma_x2"]), linestyle="None")
+    plt.scatter(np.array(center_dist), np.array(
+        fittings["sigma_x2"]), linestyle="None")
     plt.show()
     plt.figure()
     plt.title("Sigma_y2 as function from distance from center")
-    plt.scatter(np.array(center_dist), np.array(fittings["sigma_y2"]), linestyle="None")
+    plt.scatter(np.array(center_dist), np.array(
+        fittings["sigma_y2"]), linestyle="None")
     plt.show()
     print("sigma_x2", str(np.average(fittings["sigma_x2"])))
     print("sigma_y2", str(np.average(fittings["sigma_y2"])))
@@ -212,7 +252,7 @@ def get_params_from_file(file_path):
 def main():
     n = len(sys.argv)
     if n == 2:
-        fittings_path = "./out/Gaussian/" + sys.argv[1] +".csv"
+        fittings_path = "./out/Gaussian/" + sys.argv[1] + ".csv"
         get_params_from_file(fittings_path)
     else:
         path = "./data/" + sys.argv[1] + "/pluto_V.fits"
@@ -228,7 +268,8 @@ def main():
             fwhm_arc / hdul[get_image_hdu_number(hdul)].header["CDELT1"]
         )  # fwhm in pixels
 
-        all_params = {"star": [], "A": [], "B": [], "sigma_x2": [], "sigma_y2": [], "x": [], "y":[]}
+        all_params = {"star": [], "A": [], "B": [],
+                      "sigma_x2": [], "sigma_y2": [], "x": [], "y": []}
 
         skip_count = 0
 
@@ -243,13 +284,14 @@ def main():
             for j in range(len(starlist)):
                 # ignore stars that are within 25 pixels of the current star to avoid PSF issuse
                 star2 = IStar(table_row=starlist[j])
-                if i!=j and distance(star.x, star2.x, star.y, star2.y) < 25:
+                if i != j and distance(star.x, star2.x, star.y, star2.y) < 25:
                     skip = True
             if skip:
                 print("SKIPPED")
-                skip_count+=1
+                skip_count += 1
                 continue
-            gm = GaussianModel(star.x, star.y, image, fwhm, image.get_average_pixel_value())
+            gm = GaussianModel(star.x, star.y, image, fwhm,
+                               image.get_average_pixel_value())
             params = gm.get_params()
             # print(params)
             all_params["star"].append(star.star_name)
@@ -260,7 +302,8 @@ def main():
             all_params["x"].append(star.x)
             all_params["y"].append(star.y)
 
-        print("Number of stars successfully analyzed:", len(starlist) - skip_count)
+        print("Number of stars successfully analyzed:",
+              len(starlist) - skip_count)
         print("sigma_x2", str(np.average(all_params["sigma_x2"])))
         print("sigma_y2", str(np.average(all_params["sigma_y2"])))
 
