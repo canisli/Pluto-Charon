@@ -228,11 +228,11 @@ class PlutoCharonGaussian:
                 y_cs.append(y_c)
                 data.append(val)
 
-                total_residual_error += (self.image.get_pixel(x, y) - val) ** 2
+                #total_residual_error += (self.image.get_pixel(x, y) - val) ** 2
         # keep going until no residual error
-        if abs(total_residual_error - self.prev_residual_error) <= error_threshold:
-            return self.LMparams
-        self.prev_residual_error = total_residual_error
+        #if abs(total_residual_error - self.prev_residual_error) <= error_threshold:
+        #    return self.LMparams
+        #self.prev_residual_error = total_residual_error
 
         LMFitmin = Minimizer(
             pc_psf_error,
@@ -253,33 +253,33 @@ class PlutoCharonGaussian:
         return self.get_params()
 
 
-def locate_pluto_charon(image, counts, center_x, center_y, sigma_x2, sigma_y2, b):
-    a_p = 5 / 6 * counts # guess as 5/6 the brightness of pluto charon blob
-    a_c = a_p / 5 # 1/5 of a_p
-    scale = 2
-    dx_p = np.array([1, 1, -1, -1]) * scale
-    dy_p = np.array([1, -1, -1, 1]) * scale
-    dx_c = np.array([-1, 1, 1, -1]) * scale
-    dy_c = np.array([-1, -1, -1, -1]) * scale
-    for i in range(len(dx_p)): # test the four locations as per the convergence diagram
-        pluto_charon = PlutoCharonGaussian(
-            image=image,
-            b=b,
-            a_p=a_p,
-            a_c=a_c,
-            sigma_x2=sigma_x2,
-            sigma_y2=sigma_y2,
-            pluto_x=center_x + dx_p[i],
-            pluto_y=center_y + dy_p[i],
-            charon_x=center_x + dx_c[i],
-            charon_y=center_y + dy_c[i],
-            center_x=center_x,
-            center_y=center_y,
-        )
-        params = pluto_charon.get_params()
+# def locate_pluto_charon(PlutoCharonSetupData):
+#     a_p = 5 / 6 * counts # guess as 5/6 the brightness of pluto charon blob
+#     a_c = a_p / 5 # 1/5 of a_p
+#     scale = 2
+#     dx_p = np.array([1, 1, -1, -1]) * scale
+#     dy_p = np.array([1, -1, -1, 1]) * scale
+#     dx_c = np.array([-1, 1, 1, -1]) * scale
+#     dy_c = np.array([-1, -1, -1, -1]) * scale
+#     for i in range(len(dx_p)): # test the four locations as per the convergence diagram
+#         pluto_charon = PlutoCharonGaussian(
+#             image=image,
+#             a_p=a_p,
+#             a_c=a_c,
+#             b=b,
+#             sigma_x2=sigma_x2,
+#             sigma_y2=sigma_y2,
+#             pluto_x=center_x + dx_p[i],
+#             pluto_y=center_y + dy_p[i],
+#             charon_x=center_x + dx_c[i],
+#             charon_y=center_y + dy_c[i],
+#             center_x=center_x,
+#             center_y=center_y,
+#         )
+#         params = pluto_charon.get_params()
 
-        print(params["x_0p"].value, params["y_0p"].value)
-        print(params["x_0c"].value, params["y_0c"].value)
+#         print(params["x_0p"].value, params["y_0p"].value)
+#         print(params["x_0c"].value, params["y_0c"].value)
 
 
 def distance(x1, x2, y1, y2):
@@ -313,17 +313,25 @@ def plot_params(fittings, center_x, center_y):
 def main():
     # 4-25-2021
     print("Start")
-    counts = 22790.0
-    center_x = 636.87
-    center_y = 555.8
-    sigma_x2 = 10.558393348078292  # average from file
-    sigma_y2 = 5.177641522106213  # average from file
-    image = Image("./data/4-25-2021/pluto_V.fits")
-    b = 4000  # background brightness
-    locate_pluto_charon(image, counts, center_x, center_y, sigma_x2, sigma_y2, b)
+    counts = 22790.0 # counts of unidentified star (Pluto and Charon)
+
+    PlutoCharonSetupData = {}
+    PlutoCharonSetupData["orig_image"] = Image("./data/4-25-2021/pluto_V.fits")
+    PlutoCharonSetupData["subimage"] = PlutoCharonSetupData["orig_image"].subimage(636.87, 555.8, 20, 20)
+    PlutoCharonSetupData["init_background"] = 4000 # estimate based off grabbing values from ds9
+    PlutoCharonSetupData["init_Ap"] = 5/6 * counts # guess
+    PlutoCharonSetupData["init_Ac"] = 1/6 * counts
+    PlutoCharonSetupData["blob_center_x"] = 636.87
+    PlutoCharonSetupData["blob_center_y"] = 555.8
+    PlutoCharonSetupData["sigma_x2"] = 10.558393348078292 # average from GaussianModel.get_params
+    PlutoCharonSetupData["sigma_y2"] = 5.177641522106213
+    
+    PlutoCharonSetupData["subimage"].write_fits("4-25-2021_PC_subimage")
+
+    #locate_pluto_charon(PlutoCharonSetupData)
 
 
-def main2():
+def main2(): # for general PSF Gaussian
     n = len(sys.argv)
     if n == 2:
         fittings_path = "./out/Gaussian/" + sys.argv[1] + ".csv"
