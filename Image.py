@@ -113,14 +113,14 @@ class Image:
         return self.data[y][x]
 
     def subimage(self, center_x, center_y, subimage_width, subimage_height):
-        center_x = round(center_x)
-        center_y = round(center_y)
+        center_x = int(center_x)
+        center_y = int(center_y)
         subimage = Image(width=subimage_width, height=subimage_height)
-        for x in range(-10,10):
-            for y in range(-10, 10):
-                subimage.set_pixel(10+x, 10+y, self.get_pixel(center_x + x, center_y + y))
+        for x in range(-int(subimage_width/2), int(subimage_width/2)+1):
+            for y in range(-int(subimage_height/2), int(subimage_height/2)+1):
+                subimage.set_pixel((int)(subimage_width/2)+x, (int)(subimage_height /
+                                   2)+y, self.get_pixel(center_x + x, center_y + y))
         return subimage
-
 
     def set_pixel(self, x, y, val):
         if not self.is_inside(x, y):
@@ -251,6 +251,7 @@ def main():
     image = Image(file_name=file_path)
     if output_path:
         log_stars(image.get_stars(), output_path)
+
 
 if __name__ == "__main__":
     main()

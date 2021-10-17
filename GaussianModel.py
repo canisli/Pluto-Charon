@@ -29,7 +29,8 @@ def psf(params, x, y):
     return (
         params["A"]
         * math.exp(
-            -((x ** 2 / (2 * params["sigma_x2"])) + (y ** 2 / (2 * params["sigma_y2"])))
+            -((x ** 2 / (2 * params["sigma_x2"].value)) +
+              (y ** 2 / (2 * params["sigma_y2"].value)))
         )
         + params["B"]
     )
@@ -48,37 +49,32 @@ def psf_error(params, xy, data, image, center_x, center_y):
     return errors
 
 
-def pc_psf(params, x_p, y_p, x_c, y_c, sigma_x2, sigma_y2):
+def pc_psf(params, PlutoCharonSetupData, x, y):
+    # x and y are displacements from the center of the image
+    a_c = params["a_c"].value
+    a_p = params["a_p"].value
+    b = params["b"].value
+    sigma_x2 = PlutoCharonSetupData["sigma_x2"]
+    sigma_y2 = PlutoCharonSetupData["sigma_y2"]
+    x_c = params["x_0c"].value - x
+    y_c = params["y_0c"].value - y
+    x_p = params["x_0p"].value - x
+    y_p = params["y_0p"].value - y
     return (
-        params["a_c"]
-        * math.exp(-((x_c ** 2 / (2 * sigma_x2)) + (y_c ** 2 / (2 * sigma_y2))))
-        + params["a_p"]
-        * math.exp(-((x_p ** 2 / (2 * sigma_x2)) + (y_p ** 2 / (2 * sigma_y2))))
-        + params["B"]
+        a_c * math.exp(-((x_c ** 2 / (2 * sigma_x2)) + (y_c ** 2 / (2 * sigma_y2)))) +
+        a_p * math.exp(-((x_p ** 2 / (2 * sigma_x2)) +
+                       (y_p ** 2 / (2 * sigma_y2))))
+        + b
     )
 
 
-def pc_psf_error(params, pcxy, data, image, sigma_x2, sigma_y2):
-    # pcxy is x_ps, y_ps, x_cs, y_cs
-    n = len(data)
+def pc_psf_error(params, PlutoCharonSetupData, xs, ys, vals):
     errors = []
-    for i in range(n):
-        x_p = pcxy[0][i]
-        y_p = pcxy[1][i]
-        x_c = pcxy[2][i]
-        y_c = pcxy[3][i]
-        print("x_p", str(x_p))
-        print("x_0p", str(params["x_0p"].value))
-        print("y_p", str(y_p))
-        print("y_0p", str(params["y_0p"].value))
-        print(int(params["x_0p"].value - x_p), int(params["y_0p"].value - y_p))
+    for i in range(len(vals)):
         errors.append(
-            image.get_pixel(
-                int(params["x_0p"].value - x_p), int(params["y_0p"].value - y_p)
-            )
-            - pc_psf(params, x_p, y_p, x_c, y_c, sigma_x2, sigma_y2)
-        )
+            vals[i] - pc_psf(params, PlutoCharonSetupData, xs[i], ys[i]))
     return errors
+    # return val - pc_psf(params, PlutoCharonSetupData, x, y)
 
 
 class GaussianModel:
@@ -137,8 +133,10 @@ class GaussianModel:
                 total_residual_error += (self.image.get_pixel(x, y) - val) ** 2
                 dsda += -2 * (g - val) * exp_term
                 dsdb += -2 * (g - val) * 1
-                dsdsigma_x2 += -2 * (g - val) * a * x ** 2 * (exp_term) / sigma_x2 ** 3
-                dsdsigma_y2 += -2 * (g - val) * a * y ** 2 * (exp_term) / sigma_y2 ** 3
+                dsdsigma_x2 += -2 * (g - val) * a * x ** 2 * \
+                    (exp_term) / sigma_x2 ** 3
+                dsdsigma_y2 += -2 * (g - val) * a * y ** 2 * \
+                    (exp_term) / sigma_y2 ** 3
         # print(total_residual_error, self.prev_residual_error, total_residual_error - self.prev_residual_error)
         # print(dsda,dsdb,dsdsigma_x2,dsdsigma_y2)
         if abs(total_residual_error - self.prev_residual_error) <= error_threshold:
@@ -148,7 +146,8 @@ class GaussianModel:
         LMFitmin = Minimizer(
             psf_error,
             self.LMparams,
-            fcn_args=([xs, ys], data, self.image, self.center_x, self.center_y),
+            fcn_args=([xs, ys], data, self.image,
+                      self.center_x, self.center_y),
         )
         LMFitResult = LMFitmin.minimize(method="least_square")
         print(LMFitResult.params)
@@ -157,129 +156,71 @@ class GaussianModel:
 
 
 class PlutoCharonGaussian:
-    def __init__(
-        self,
-        image,
-        a_p,
-        a_c,
-        b,
-        sigma_x2,
-        sigma_y2,
-        pluto_x,
-        pluto_y,
-        charon_x,
-        charon_y,
-        center_x,
-        center_y,
-    ):
-        self.sigma_x2 = sigma_x2
-        self.sigma_y2 = sigma_y2
-        self.image = image
-        self.pluto_x = pluto_x
-        self.pluto_y = pluto_y
-        self.charon_x = charon_x
-        self.charon_y = charon_y
-        self.center_x = center_x  # center of blob identified by find stars
-        self.center_y = center_y
-        self.a_p = a_p
-        self.a_c = a_c
-        self.b = b
+    def __init__(self, PlutoCharonSetupData):
+        self.PlutoCharonSetupData = PlutoCharonSetupData
 
         self.LMparams = Parameters()
-        self.LMparams.add("x_0p", value=pluto_x)
-        self.LMparams.add("y_0p", value=pluto_y)
-        self.LMparams.add("x_0c", value=charon_x)
-        self.LMparams.add("y_0c", value=charon_y)
-        self.LMparams.add("a_p", value=a_p)
-        self.LMparams.add("a_c", value=a_c)
-        self.LMparams.add("B", value=b)
-        self.prev_residual_error = -math.inf
+        self.LMparams.add("x_0p", value=self.PlutoCharonSetupData["x_0p"])
+        self.LMparams.add("y_0p", value=self.PlutoCharonSetupData["y_0p"])
+        self.LMparams.add("x_0c", value=self.PlutoCharonSetupData["x_0c"])
+        self.LMparams.add("y_0c", value=self.PlutoCharonSetupData["y_0c"])
+        self.LMparams.add("a_p", value=self.PlutoCharonSetupData["init_Ap"])
+        self.LMparams.add("a_c", value=self.PlutoCharonSetupData["init_Ac"])
+        self.LMparams.add(
+            "b", value=self.PlutoCharonSetupData["init_background"])
 
     def get_params(self):
         """
         Returns all seven params {x_0c, y_0c, x_0p,y_0p, A_p, A_c, B}
         """
-        total_residual_error = 0
-        x_ps = []
-        y_ps = []
-        x_cs = []
-        y_cs = []
-        data = []
-        sigma_x2 = self.sigma_x2
-        sigma_y2 = self.sigma_y2
-        x_0p = self.LMparams["x_0p"].value
-        y_0p = self.LMparams["y_0p"].value
-        x_0c = self.LMparams["x_0c"].value
-        y_0c = self.LMparams["y_0c"].value
+        xs = []
+        ys = []
+        vals = []  # actualy pixel value
         # call psf on 20x20 box around center of pluto charon blob
-        for x in range(int(round(self.center_x)) - 10, int(round(self.center_x)) + 10):
-            for y in range(
-                int(round(self.center_y)) - 10, int(round(self.center_y)) + 10
-            ):
-                x_p = x_0p - x
-                y_p = y_0p - y
-                x_c = x_0c - x
-                y_c = y_0c - y
-                val = pc_psf(self.LMparams, x_p, y_p, x_c, y_c, sigma_x2, sigma_y2)
+        for x in range(0, 19):  # TODO de-hardcode it
+            for y in range(0, 19):
+                xs.append(x)
+                ys.append(y),
+                vals.append(
+                    self.PlutoCharonSetupData["subimage"].get_pixel(x, y))
 
-                x_ps.append(x_p)
-                y_ps.append(y_p)
-                x_cs.append(x_c)
-                y_cs.append(y_c)
-                data.append(val)
-
-                #total_residual_error += (self.image.get_pixel(x, y) - val) ** 2
-        # keep going until no residual error
-        #if abs(total_residual_error - self.prev_residual_error) <= error_threshold:
-        #    return self.LMparams
-        #self.prev_residual_error = total_residual_error
-
+        # print(len(xs), len(ys), len(vals))
+        # print(vals)
         LMFitmin = Minimizer(
             pc_psf_error,
             self.LMparams,
             fcn_args=(
-                [x_ps, y_ps, x_cs, y_cs],
-                data,
-                self.image,
-                self.sigma_x2,
-                self.sigma_y2,
+                self.PlutoCharonSetupData,
+                xs, ys, vals
             ),
         )
-        print("Before")
-        LMFitResult = LMFitmin.minimize(method="least_square")  # code breaks here!
-        print("After")
-        print(LMFitResult.params)
-        self.LMparams = LMFitResult.params
-        return self.get_params()
+        # print("Before")
+        LMFitResult = LMFitmin.minimize(
+            method="least_squares")  # code breaks here!
+        # print("After")
+        # print(LMFitResult.params)
+        return LMFitResult.params
 
 
-# def locate_pluto_charon(PlutoCharonSetupData):
-#     a_p = 5 / 6 * counts # guess as 5/6 the brightness of pluto charon blob
-#     a_c = a_p / 5 # 1/5 of a_p
-#     scale = 2
-#     dx_p = np.array([1, 1, -1, -1]) * scale
-#     dy_p = np.array([1, -1, -1, 1]) * scale
-#     dx_c = np.array([-1, 1, 1, -1]) * scale
-#     dy_c = np.array([-1, -1, -1, -1]) * scale
-#     for i in range(len(dx_p)): # test the four locations as per the convergence diagram
-#         pluto_charon = PlutoCharonGaussian(
-#             image=image,
-#             a_p=a_p,
-#             a_c=a_c,
-#             b=b,
-#             sigma_x2=sigma_x2,
-#             sigma_y2=sigma_y2,
-#             pluto_x=center_x + dx_p[i],
-#             pluto_y=center_y + dy_p[i],
-#             charon_x=center_x + dx_c[i],
-#             charon_y=center_y + dy_c[i],
-#             center_x=center_x,
-#             center_y=center_y,
-#         )
-#         params = pluto_charon.get_params()
-
-#         print(params["x_0p"].value, params["y_0p"].value)
-#         print(params["x_0c"].value, params["y_0c"].value)
+def locate_pluto_charon(PlutoCharonSetupData):
+    scale = 2
+    dx_p = np.array([1, 1, -1, -1]) * scale
+    dy_p = np.array([1, -1, -1, 1]) * scale
+    dx_c = np.array([-1, 1, 1, -1]) * scale
+    dy_c = np.array([-1, -1, -1, -1]) * scale
+    for i in range(len(dx_p)):  # test the four locations as per the convergence diagram
+        PlutoCharonSetupData["x_0p"] = 10 + dx_p[i]
+        # CHANGE 10 TO MIDDLE LATER
+        PlutoCharonSetupData["y_0p"] = 10 + dy_p[i]
+        PlutoCharonSetupData["x_0c"] = 10 + dx_c[i]
+        PlutoCharonSetupData["y_0c"] = 10 + dy_c[i]
+        pluto_charon = PlutoCharonGaussian(
+            PlutoCharonSetupData
+        )
+        params = pluto_charon.get_params()
+        print("Locations after fitting")
+        print("Pluto: ", params["x_0p"].value, params["y_0p"].value)
+        print("Charon: ", params["x_0c"].value, params["y_0c"].value)
 
 
 def distance(x1, x2, y1, y2):
@@ -297,14 +238,17 @@ def get_params_from_file(file_path):
 def plot_params(fittings, center_x, center_y):
     center_dist = []
     for x, y in zip(fittings["x"], fittings["y"]):  # iterate in parallel
-        center_dist.append(math.sqrt((x - center_x) ** 2 + (y - center_y) ** 2))
+        center_dist.append(
+            math.sqrt((x - center_x) ** 2 + (y - center_y) ** 2))
     print(center_dist, fittings["sigma_x2"])
     plt.title("Sigma_x2 as function from distance from center")
-    plt.scatter(np.array(center_dist), np.array(fittings["sigma_x2"]), linestyle="None")
+    plt.scatter(np.array(center_dist), np.array(
+        fittings["sigma_x2"]), linestyle="None")
     plt.show()
     plt.figure()
     plt.title("Sigma_y2 as function from distance from center")
-    plt.scatter(np.array(center_dist), np.array(fittings["sigma_y2"]), linestyle="None")
+    plt.scatter(np.array(center_dist), np.array(
+        fittings["sigma_y2"]), linestyle="None")
     plt.show()
     print("sigma_x2", str(np.average(fittings["sigma_x2"])))
     print("sigma_y2", str(np.average(fittings["sigma_y2"])))
@@ -313,25 +257,28 @@ def plot_params(fittings, center_x, center_y):
 def main():
     # 4-25-2021
     print("Start")
-    counts = 22790.0 # counts of unidentified star (Pluto and Charon)
+    counts = 22790.0  # counts of unidentified star (Pluto and Charon)
 
     PlutoCharonSetupData = {}
     PlutoCharonSetupData["orig_image"] = Image("./data/4-25-2021/pluto_V.fits")
-    PlutoCharonSetupData["subimage"] = PlutoCharonSetupData["orig_image"].subimage(636.87, 555.8, 20, 20)
-    PlutoCharonSetupData["init_background"] = 4000 # estimate based off grabbing values from ds9
-    PlutoCharonSetupData["init_Ap"] = 5/6 * counts # guess
-    PlutoCharonSetupData["init_Ac"] = 1/6 * counts
+    PlutoCharonSetupData["subimage"] = PlutoCharonSetupData["orig_image"].subimage(
+        636.87 + 2, 555.8 + 2, 19, 19
+    )
+    # estimate based off grabbing values from ds9
+    PlutoCharonSetupData["init_background"] = 4000
+    PlutoCharonSetupData["init_Ap"] = 5 / 6 * counts  # guess
+    PlutoCharonSetupData["init_Ac"] = 1 / 6 * counts
     PlutoCharonSetupData["blob_center_x"] = 636.87
     PlutoCharonSetupData["blob_center_y"] = 555.8
-    PlutoCharonSetupData["sigma_x2"] = 10.558393348078292 # average from GaussianModel.get_params
+    # average from GaussianModel.get_params
+    PlutoCharonSetupData["sigma_x2"] = 10.558393348078292
     PlutoCharonSetupData["sigma_y2"] = 5.177641522106213
-    
     PlutoCharonSetupData["subimage"].write_fits("4-25-2021_PC_subimage")
+    print(PlutoCharonSetupData["subimage"].get_pixel(5, 5))
+    locate_pluto_charon(PlutoCharonSetupData)
 
-    #locate_pluto_charon(PlutoCharonSetupData)
 
-
-def main2(): # for general PSF Gaussian
+def main2():  # for general PSF Gaussian
     n = len(sys.argv)
     if n == 2:
         fittings_path = "./out/Gaussian/" + sys.argv[1] + ".csv"
@@ -392,7 +339,8 @@ def main2(): # for general PSF Gaussian
             all_params["x"].append(star.x)
             all_params["y"].append(star.y)
 
-        print("Number of stars successfully analyzed:", len(starlist) - skip_count)
+        print("Number of stars successfully analyzed:",
+              len(starlist) - skip_count)
         print("sigma_x2", str(np.average(all_params["sigma_x2"])))
         print("sigma_y2", str(np.average(all_params["sigma_y2"])))
 
