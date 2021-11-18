@@ -1,3 +1,5 @@
+# https://witeboard.com/0bbe7650-4839-11ec-87f9-5f988fea8bbc
+
 """
 USAGE:
 $ python3 GaussianModel.py date output_path
@@ -22,30 +24,23 @@ import matplotlib.pyplot as plt
 from IStar import IStar
 from Image import Image, get_image_hdu_number
 
-error_threshold = 0.0  # maximum change in total residual error
+# error_threshold = 0.0  # maximum change in total residual error
 
 
-def psf(params, x, y):
+def psf(params, PSFSetupData, x, y):
+    a = params["a"].value
+    b = params["b"].value
+    sigma_x2 = params["sigma_x2"].value
+    sigma_y2 = params["sigma_y2"].value
     return (
-        params["A"]
-        * math.exp(
-            -((x ** 2 / (2 * params["sigma_x2"].value)) +
-              (y ** 2 / (2 * params["sigma_y2"].value)))
-        )
-        + params["B"]
+        a * math.exp(-(x ** 2 / (2 * sigma_x2) + y ** 2 / (2 * sigma_y2))) + b
     )
 
 
-def psf_error(params, xy, data, image, center_x, center_y):
-    n = len(data)
+def psf_error(params, PSFSetupData, xs, ys, vals):
     errors = []
-    for i in range(n):
-        dx = xy[0][i]
-        dy = xy[1][i]
-        errors.append(
-            image.get_pixel(int(center_x - dx), int(center_y - dy))
-            - psf(params, dx, dy)
-        )
+    for i in range(len(vals)):
+        errors.append(vals[i]-psf(params, PSFSetupData, xs[i], ys[i]))
     return errors
 
 
@@ -63,7 +58,7 @@ def pc_psf(params, PlutoCharonSetupData, x, y):
     return (
         a_c * math.exp(-((x_c ** 2 / (2 * sigma_x2)) + (y_c ** 2 / (2 * sigma_y2)))) +
         a_p * math.exp(-((x_p ** 2 / (2 * sigma_x2)) +
-                       (y_p ** 2 / (2 * sigma_y2))))
+                         (y_p ** 2 / (2 * sigma_y2))))
         + b
     )
 
@@ -78,10 +73,13 @@ def pc_psf_error(params, PlutoCharonSetupData, xs, ys, vals):
 
 
 class GaussianModel:
-    def __init__(self, center_x, center_y, image, fwhm, average_pixel_value):
-        self.center_x = center_x
-        self.center_y = center_y
-        self.image = image
+    def __init__(self, PSFSetupData):
+        self.PSFSetupData = PSFSetupData
+        center_x = PSFSetupData["star_x"]
+        center_y = PSFSetupData["star_y"]
+        image = PSFSetupData["orig_image"]
+        fwhm = PSFSetupData["fwhm"]
+        avg_pixel_val = PSFSetupData["avg_pixel_val"]
 
         a = np.max(
             [  # four pixels around center
@@ -91,66 +89,47 @@ class GaussianModel:
                 image.get_pixel(math.ceil(center_x), math.ceil(center_y)),
             ]
         )
+
         sigma2 = (fwhm / 2.355) ** 2
 
         self.LMparams = Parameters()
-        self.LMparams.add("A", value=a)
-        self.LMparams.add("B", value=average_pixel_value)
+        self.LMparams.add("a", value=a)
+        self.LMparams.add("b", value=avg_pixel_val)
         self.LMparams.add("sigma_x2", value=sigma2)
         self.LMparams.add("sigma_y2", value=sigma2)
-        self.prev_residual_error = -math.inf
+        # self.prev_residual_error = -math.inf
 
     def get_params(self):
         """
         Returns all four params {A,B,sigma_x2,sigma_y2} obtained from fitting
         """
-        total_residual_error = 0
-        dsda = dsdb = dsdsigma_x2 = dsdsigma_y2 = 0
+        # total_residual_error = 0
+        #dsda = dsdb = dsdsigma_x2 = dsdsigma_y2 = 0
+
+        center_x = self.PSFSetupData["star_x"]
+        center_y = self.PSFSetupData["star_y"]
+
         xs = []
         ys = []
-        data = []
-
-        a = self.LMparams["A"].value
-        b = self.LMparams["B"].value
-        sigma_x2 = self.LMparams["sigma_x2"].value
-        sigma_y2 = self.LMparams["sigma_y2"].value
-
-        for x in range(int(round(self.center_x)) - 10, int(round(self.center_x)) + 10):
-            for y in range(
-                int(round(self.center_y)) - 10, int(round(self.center_y)) + 10
-            ):
-                dx = self.center_x - x  # x = center_x - dx
-                dy = self.center_y - y  # y = center_y - dy
-                val = psf(self.LMparams, dx, dy)
-
-                xs.append(dx)
-                ys.append(dy)
-                data.append(val)
-
-                g = self.image.get_pixel(x, y)
-                exp_term = (val - b) / a
-
-                total_residual_error += (self.image.get_pixel(x, y) - val) ** 2
-                dsda += -2 * (g - val) * exp_term
-                dsdb += -2 * (g - val) * 1
-                dsdsigma_x2 += -2 * (g - val) * a * x ** 2 * \
-                    (exp_term) / sigma_x2 ** 3
-                dsdsigma_y2 += -2 * (g - val) * a * y ** 2 * \
-                    (exp_term) / sigma_y2 ** 3
-        # print(total_residual_error, self.prev_residual_error, total_residual_error - self.prev_residual_error)
-        # print(dsda,dsdb,dsdsigma_x2,dsdsigma_y2)
-        if abs(total_residual_error - self.prev_residual_error) <= error_threshold:
-            return self.LMparams
-        self.prev_residual_error = total_residual_error
+        vals = []  # actual pixel value
+        # call psf on 20x20 box around center of pluto charon blob
+        for x in range(0, 19):  # TODO de-hardcode it
+            for y in range(0, 19):
+                xs.append(9-x)
+                # TODO MAKE COORDINATES RELATIVE TO THE CENTER OF THE STAR
+                ys.append(9-y)
+                vals.append(self.PSFSetupData["subimage"].get_pixel(x, y))
 
         LMFitmin = Minimizer(
             psf_error,
             self.LMparams,
-            fcn_args=([xs, ys], data, self.image,
-                      self.center_x, self.center_y),
+            fcn_args=(
+                self.PSFSetupData,
+                xs, ys, vals
+            ),
         )
         LMFitResult = LMFitmin.minimize(method="least_square")
-        print(LMFitResult.params)
+        # print(LMFitResult.params)
         self.LMparams = LMFitResult.params
         return self.get_params()
 
@@ -179,8 +158,9 @@ class PlutoCharonGaussian:
         # call psf on 20x20 box around center of pluto charon blob
         for x in range(0, 19):  # TODO de-hardcode it
             for y in range(0, 19):
-                xs.append(x)
-                ys.append(y),
+                # TODO MAKE COORDINATES RELATIVE TO THE CENTER OF THE STAR
+                xs.append(10-x)
+                ys.append(10-y)
                 vals.append(
                     self.PlutoCharonSetupData["subimage"].get_pixel(x, y))
 
@@ -297,7 +277,7 @@ def main2():  # for general PSF Gaussian
             fwhm_arc / hdul[get_image_hdu_number(hdul)].header["CDELT1"]
         )  # fwhm in pixels
 
-        all_params = {
+        all_params = {  # dict for all the stars
             "star": [],
             "A": [],
             "B": [],
@@ -314,7 +294,7 @@ def main2():  # for general PSF Gaussian
             print("<" + str(i + 1) + ">\n", str(starlist[i]))
             skip = False
             # ignore fake stars
-            if not isinstance(star.counts, str):
+            if not isinstance(star.counts, str):  # if counts not "N/A"
                 if star.counts < 0:
                     skip = True
             for j in range(len(starlist)):
@@ -323,12 +303,25 @@ def main2():  # for general PSF Gaussian
                 if i != j and distance(star.x, star2.x, star.y, star2.y) < 25:
                     skip = True
             if skip:
-                print("SKIPPED")
+                # print("SKIPPED")
                 skip_count += 1
                 continue
-            gm = GaussianModel(
-                star.x, star.y, image, fwhm, image.get_average_pixel_value()
+
+            PSFSetupData = {}
+            PSFSetupData["star_x"] = star.x
+            PSFSetupData["star_y"] = star.y
+            PSFSetupData["orig_image"] = image
+            PSFSetupData["subimage"] = PSFSetupData["orig_image"].subimage(
+                star.x+1, star.y+2, 19, 19
             )
+            # PSFSetupData["orig_image"].subimage(
+            #     star.x+1, star.y+2, 19, 19
+            # ).write_fits("nov17")
+            PSFSetupData["fwhm"] = fwhm
+            PSFSetupData["avg_pixel_val"] = image.get_average_pixel_value()
+
+            gm = GaussianModel(PSFSetupData)
+
             params = gm.get_params()
             # print(params)
             all_params["star"].append(star.star_name)
@@ -345,7 +338,8 @@ def main2():  # for general PSF Gaussian
         print("sigma_y2", str(np.average(all_params["sigma_y2"])))
 
         Table(all_params).write(output_path, format="csv", overwrite=True)
+        print("Wrote to file: " + output_path)
 
 
 if __name__ == "__main__":
-    main()
+    main2()

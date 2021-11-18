@@ -110,7 +110,7 @@ class Image:
         return True
 
     def get_pixel(self, x, y):
-        return self.data[y][x]
+        return self.data[y][x]  # 0 indexed
 
     def subimage(self, center_x, center_y, subimage_width, subimage_height):
         center_x = int(center_x)
