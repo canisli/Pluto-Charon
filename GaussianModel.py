@@ -1,6 +1,7 @@
 # https://witeboard.com/0bbe7650-4839-11ec-87f9-5f988fea8bbc
 
 """
+ignore this for now
 USAGE:
 $ python3 GaussianModel.py date output_path
     date = MM-DD-YYYY date in which image was taken (this is the name of the data folder)
@@ -11,22 +12,25 @@ $ python3 GaussianModel.py input_path
     input_path = path to csv file previously generated from above usage
 """
 
+"""
+two main files are:
+PlutoCharonDriver
+GeneralPSFDriver
+"""
+
+
+
+
 import math
 import sys
-
-from lmfit import minimize, Minimizer, Parameters, Parameter, report_fit
+from lmfit import Minimizer, minimize, Parameters, Parameter, fit_report
 from scipy import optimize
 from astropy.io import fits
 from astropy.table import Table
 import numpy as np
 import matplotlib.pyplot as plt
-
 from IStar import IStar
 from Image import Image, get_image_hdu_number
-
-# error_threshold = 0.0  # maximum change in total residual error
-
-
 def psf(params, PSFSetupData, x, y):
     a = params["a"].value
     b = params["b"].value
@@ -38,6 +42,7 @@ def psf(params, PSFSetupData, x, y):
 
 
 def psf_error(params, PSFSetupData, xs, ys, vals):
+    # return array of residuals
     errors = []
     for i in range(len(vals)):
         errors.append(vals[i]-psf(params, PSFSetupData, xs[i], ys[i]))
@@ -51,10 +56,12 @@ def pc_psf(params, PlutoCharonSetupData, x, y):
     b = params["b"].value
     sigma_x2 = PlutoCharonSetupData["sigma_x2"]
     sigma_y2 = PlutoCharonSetupData["sigma_y2"]
-    x_c = params["x_0c"].value - x
-    y_c = params["y_0c"].value - y
-    x_p = params["x_0p"].value - x
-    y_p = params["y_0p"].value - y
+    # center of pluto + displacement relative to pluto = center of subimage + displacement relative to center of subimage
+    # ==> displacement relative to pluto = center of subimage + displacement relative to subimage - center of pluto
+    x_c = 10+x-(10+params["x_0c"].value)  # x offset from pluto center
+    y_c = y - params["y_0c"].value
+    x_p = x - params["x_0p"].value
+    y_p = y - params["y_0p"].value
     return (
         a_c * math.exp(-((x_c ** 2 / (2 * sigma_x2)) + (y_c ** 2 / (2 * sigma_y2)))) +
         a_p * math.exp(-((x_p ** 2 / (2 * sigma_x2)) +
@@ -108,30 +115,30 @@ class GaussianModel:
 
         center_x = self.PSFSetupData["star_x"]
         center_y = self.PSFSetupData["star_y"]
+        subimage = self.PSFSetupData["subimage"]
 
-        xs = []
+        xs = []  # make into dxs
         ys = []
         vals = []  # actual pixel value
         # call psf on 20x20 box around center of pluto charon blob
         for x in range(0, 19):  # TODO de-hardcode it
             for y in range(0, 19):
-                xs.append(9-x)
+                xs.append(x-10)
                 # TODO MAKE COORDINATES RELATIVE TO THE CENTER OF THE STAR
-                ys.append(9-y)
+                ys.append(y-10)
                 vals.append(self.PSFSetupData["subimage"].get_pixel(x, y))
 
-        LMFitmin = Minimizer(
-            psf_error,
-            self.LMparams,
-            fcn_args=(
-                self.PSFSetupData,
-                xs, ys, vals
-            ),
-        )
-        LMFitResult = LMFitmin.minimize(method="least_square")
+        # LMFitmin = Minimizer(
+        #     psf_error,
+        #     self.LMparams,
+        #     args=(xs, ys, vals,)
+        # )
+        LMFitResult = minimize(psf_error, self.LMparams, args=(
+            self.PSFSetupData, xs, ys, vals,), method="least_squares")
         # print(LMFitResult.params)
+        # print(fit_report(LMFitResult))
         self.LMparams = LMFitResult.params
-        return self.get_params()
+        return self.LMparams
 
 
 class PlutoCharonGaussian:
@@ -155,42 +162,43 @@ class PlutoCharonGaussian:
         xs = []
         ys = []
         vals = []  # actualy pixel value
-        # call psf on 20x20 box around center of pluto charon blob
+        # call psf on 19x19 box around center of pluto charon blob
         for x in range(0, 19):  # TODO de-hardcode it
             for y in range(0, 19):
                 # TODO MAKE COORDINATES RELATIVE TO THE CENTER OF THE STAR
-                xs.append(10-x)
-                ys.append(10-y)
+                xs.append(x-10)
+                ys.append(x-10)
                 vals.append(
                     self.PlutoCharonSetupData["subimage"].get_pixel(x, y))
 
         # print(len(xs), len(ys), len(vals))
         # print(vals)
-        LMFitmin = Minimizer(
-            pc_psf_error,
-            self.LMparams,
-            fcn_args=(
-                self.PlutoCharonSetupData,
-                xs, ys, vals
-            ),
-        )
+        # LMFitmin = Minimizer(
+        #     pc_psf_error,
+        #     self.LMparams,
+        #     fcn_args=(
+        #         self.PlutoCharonSetupData,
+        #         xs, ys, vals
+        #     ),
+        # )
+        LMFitResult = minimize(pc_psf_error, self.LMparams, args=(
+            self.PlutoCharonSetupData, xs, ys, vals,), method="least_squares")
         # print("Before")
-        LMFitResult = LMFitmin.minimize(
-            method="least_squares")  # code breaks here!
         # print("After")
-        # print(LMFitResult.params)
+        print(fit_report(LMFitResult))
         return LMFitResult.params
 
 
 def locate_pluto_charon(PlutoCharonSetupData):
-    scale = 2
+    scale = 1
     dx_p = np.array([1, 1, -1, -1]) * scale
     dy_p = np.array([1, -1, -1, 1]) * scale
     dx_c = np.array([-1, 1, 1, -1]) * scale
     dy_c = np.array([-1, -1, -1, -1]) * scale
     for i in range(len(dx_p)):  # test the four locations as per the convergence diagram
+        # These coordinates are relative to the center of the subimage
         PlutoCharonSetupData["x_0p"] = 10 + dx_p[i]
-        # CHANGE 10 TO MIDDLE LATER
+        # CHANGE 10 TO MIDDLE OF SUBIMAGE LATER
         PlutoCharonSetupData["y_0p"] = 10 + dy_p[i]
         PlutoCharonSetupData["x_0c"] = 10 + dx_c[i]
         PlutoCharonSetupData["y_0c"] = 10 + dy_c[i]
@@ -209,8 +217,8 @@ def distance(x1, x2, y1, y2):
 
 def get_params_from_file(file_path):
     fittings = Table.read(file_path, format="csv")
-    center_x, center_y = 635, 526  # need to parameterize
-    plot_params(fittings, center_x, center_y)
+    # center_x, center_y = 635, 526  # need to parameterize center of image
+    #plot_params(fittings, center_x, center_y)
     # print average sigma
     return fittings
 
@@ -234,40 +242,57 @@ def plot_params(fittings, center_x, center_y):
     print("sigma_y2", str(np.average(fittings["sigma_y2"])))
 
 
-def main():
+def compute_avg(file_path, upper_bound=10):
+    """compute the average sigma_x2 and sigma_y2. ignores vals over threshold"""
+    fittings = get_params_from_file(file_path)
+
+    avg_sigma_x2 = np.average(
+        [x for x in fittings["sigma_x2"] if x < upper_bound])
+    avg_sigma_y2 = np.average(
+        [x for x in fittings["sigma_y2"] if x < upper_bound])
+    return (avg_sigma_x2, avg_sigma_y2)
+
+
+def PlutoCharonDriver():
     # 4-25-2021
     print("Start")
     counts = 22790.0  # counts of unidentified star (Pluto and Charon)
-
     PlutoCharonSetupData = {}
     PlutoCharonSetupData["orig_image"] = Image("./data/4-25-2021/pluto_V.fits")
+    blob_center_x = 636.87+2
+    blob_center_y = 555.8 + 2
     PlutoCharonSetupData["subimage"] = PlutoCharonSetupData["orig_image"].subimage(
-        636.87 + 2, 555.8 + 2, 19, 19
+        blob_center_x, blob_center_y, 19, 19
     )
     # estimate based off grabbing values from ds9
     PlutoCharonSetupData["init_background"] = 4000
     PlutoCharonSetupData["init_Ap"] = 5 / 6 * counts  # guess
     PlutoCharonSetupData["init_Ac"] = 1 / 6 * counts
-    PlutoCharonSetupData["blob_center_x"] = 636.87
-    PlutoCharonSetupData["blob_center_y"] = 555.8
+    PlutoCharonSetupData["blob_center_x"] = blob_center_x
+    PlutoCharonSetupData["blob_center_y"] = blob_center_y
     # average from GaussianModel.get_params
-    PlutoCharonSetupData["sigma_x2"] = 10.558393348078292
-    PlutoCharonSetupData["sigma_y2"] = 5.177641522106213
+    avg_sigmas = compute_avg("./out/Gaussian/11-25-2021.csv")
+    PlutoCharonSetupData["sigma_x2"] = avg_sigmas[0]
+    PlutoCharonSetupData["sigma_y2"] = avg_sigmas[1]
     PlutoCharonSetupData["subimage"].write_fits("4-25-2021_PC_subimage")
     print(PlutoCharonSetupData["subimage"].get_pixel(5, 5))
     locate_pluto_charon(PlutoCharonSetupData)
 
 
-def main2():  # for general PSF Gaussian
+def GeneralPSFDriver():  # for general PSF Gaussian
     n = len(sys.argv)
     if n == 2:
         fittings_path = "./out/Gaussian/" + sys.argv[1] + ".csv"
         get_params_from_file(fittings_path)
     else:
-        path = "./data/" + sys.argv[1] + "/pluto_V.fits"
-        starlist_path = "./out/Starlist/" + sys.argv[1] + ".csv"
+        # path = "./data/" + sys.argv[1] + "/pluto_V.fits"
+        # starlist_path = "./out/Starlist/" + sys.argv[1] + ".csv"
+        # starlist = Table.read(starlist_path, format="csv")
+        # output_path = "./out/Gaussian/" + sys.argv[2] + ".csv"
+        path = "./data/4-25-2021/pluto_V.fits"
+        starlist_path = "./out/Starlist/4-25-2021.csv"
         starlist = Table.read(starlist_path, format="csv")
-        output_path = "./out/Gaussian/" + sys.argv[2] + ".csv"
+        output_path = "./out/Gaussian/11-25-2021.csv"
 
         image = Image(path)
         hdul = fits.open(path)
@@ -279,8 +304,8 @@ def main2():  # for general PSF Gaussian
 
         all_params = {  # dict for all the stars
             "star": [],
-            "A": [],
-            "B": [],
+            "a": [],
+            "b": [],
             "sigma_x2": [],
             "sigma_y2": [],
             "x": [],
@@ -303,7 +328,7 @@ def main2():  # for general PSF Gaussian
                 if i != j and distance(star.x, star2.x, star.y, star2.y) < 25:
                     skip = True
             if skip:
-                # print("SKIPPED")
+                print("==================SKIPPED==============")
                 skip_count += 1
                 continue
 
@@ -312,11 +337,9 @@ def main2():  # for general PSF Gaussian
             PSFSetupData["star_y"] = star.y
             PSFSetupData["orig_image"] = image
             PSFSetupData["subimage"] = PSFSetupData["orig_image"].subimage(
-                star.x+1, star.y+2, 19, 19
+                star.x, star.y, 19, 19
             )
-            # PSFSetupData["orig_image"].subimage(
-            #     star.x+1, star.y+2, 19, 19
-            # ).write_fits("nov17")
+            PSFSetupData["subimage"].write_fits("nov25")
             PSFSetupData["fwhm"] = fwhm
             PSFSetupData["avg_pixel_val"] = image.get_average_pixel_value()
 
@@ -325,8 +348,8 @@ def main2():  # for general PSF Gaussian
             params = gm.get_params()
             # print(params)
             all_params["star"].append(star.star_name)
-            all_params["A"].append(params["A"].value)
-            all_params["B"].append(params["B"].value)
+            all_params["a"].append(params["a"].value)
+            all_params["b"].append(params["b"].value)
             all_params["sigma_x2"].append(params["sigma_x2"].value)
             all_params["sigma_y2"].append(params["sigma_y2"].value)
             all_params["x"].append(star.x)
@@ -341,5 +364,9 @@ def main2():  # for general PSF Gaussian
         print("Wrote to file: " + output_path)
 
 
+def main():
+    PlutoCharonDriver()
+
+
 if __name__ == "__main__":
-    main2()
+    main()
