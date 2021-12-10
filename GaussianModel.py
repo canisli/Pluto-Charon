@@ -12,11 +12,6 @@ $ python3 GaussianModel.py input_path
     input_path = path to csv file previously generated from above usage
 """
 
-"""
-two main files are:
-PlutoCharonDriver
-GeneralPSFDriver
-"""
 
 import math
 import sys
@@ -40,6 +35,8 @@ class GaussianModel:
         subimage = self.PSFSetupData["subimage"]
         xc = int(subimage.width / 2 + 1)
         yc = int(subimage.height / 2 + 1)
+        # xc = self.LMparams["xc"].value
+        # yc = self.LMparams["yc"].value
         xs = [x - xc for x in range(subimage.width) for y in range(subimage.height)]
         ys = [y - yc for x in range(subimage.width) for y in range(subimage.height)]
         vals = [
@@ -85,6 +82,8 @@ class StarGaussian(GaussianModel):
         sigma2 = (PSFSetupData["fwhm"] / 2.355) ** 2
 
         self.LMparams = Parameters()
+        self.LMparams.add("xc", value=(int)(PSFSetupData["subimage"].width / 2 + 1))
+        self.LMparams.add("yc", value=(int)(PSFSetupData["subimage"].height / 2 + 1))
         self.LMparams.add("a", value=a)
         self.LMparams.add("b", value=PSFSetupData["avg_pixel_val"])
         self.LMparams.add("sigma_x2", value=sigma2)
@@ -97,6 +96,13 @@ class StarGaussian(GaussianModel):
     def psf(self, LMparams, dx, dy):
         a = LMparams["a"].value
         b = LMparams["b"].value
+        subimage = self.PSFSetupData["subimage"]
+        mx = int(subimage.width / 2 + 1)
+        my = int(subimage.height / 2 + 1)
+        xc = LMparams["xc"].value
+        yc = LMparams["yc"].value
+        dx = dx + mx - xc
+        dy = dy + my - yc
         sigma_x2 = LMparams["sigma_x2"].value
         sigma_y2 = LMparams["sigma_y2"].value
         return a * math.exp(-(dx ** 2 / (2 * sigma_x2) + dy ** 2 / (2 * sigma_y2))) + b

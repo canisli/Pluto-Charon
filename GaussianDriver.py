@@ -1,3 +1,4 @@
+import time
 from GaussianModel import *
 
 
@@ -40,7 +41,7 @@ def GeneralPSFDriver():  # for general PSF Gaussian
         path = "./data/4-25-2021/pluto_V.fits"
         starlist_path = "./out/Starlist/4-25-2021.csv"
         starlist = Table.read(starlist_path, format="csv")
-        output_path = "./out/Gaussian/11-25-2021.csv"
+        output_path = "./out/Gaussian/" + time.strftime("%m-%d-%y") + ".csv"
 
         image = Image(path)
         hdul = fits.open(path)
@@ -75,6 +76,10 @@ def GeneralPSFDriver():  # for general PSF Gaussian
                 star2 = IStar(table_row=starlist[j])
                 if i != j and distance(star.x, star2.x, star.y, star2.y) < 25:
                     skip = True
+            if star.x < 11 or star.x > image.width - 11:
+                skip = True
+            if star.y < 11 or star.y > image.height - 11:
+                skip = True
             if skip:
                 print("==================SKIPPED==============")
                 skip_count += 1
