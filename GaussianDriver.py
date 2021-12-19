@@ -65,16 +65,16 @@ def GeneralPSFDriver():  # for general PSF Gaussian
 
         for i in range(len(starlist)):
             star = IStar(table_row=starlist[i])
-            print("<" + str(i + 1) + ">\n", str(starlist[i]))
+            # print("<" + str(i + 1) + ">\n", str(starlist[i]))
             skip = False
             # ignore fake stars
             if not isinstance(star.counts, str):  # if counts not "N/A"
                 if star.counts < 0:
                     skip = True
             for j in range(len(starlist)):
-                # ignore stars that are within 25 pixels of the current star to avoid PSF issuse
+                # ignore stars that are within 25 pixels of the current star to avoid interference
                 star2 = IStar(table_row=starlist[j])
-                if i != j and distance(star.x, star2.x, star.y, star2.y) < 25:
+                if i != j and distance(star.x, star2.x, star.y, star2.y) < 50:
                     skip = True
             if star.x < 11 or star.x > image.width - 11:
                 skip = True
@@ -84,13 +84,13 @@ def GeneralPSFDriver():  # for general PSF Gaussian
                 print("==================SKIPPED==============")
                 skip_count += 1
                 continue
-
+            print("<" + str(i + 1) + ">\n", str(starlist[i]))
             PSFSetupData = {}
             PSFSetupData["star_x"] = star.x
             PSFSetupData["star_y"] = star.y
             PSFSetupData["orig_image"] = image
             PSFSetupData["subimage"] = PSFSetupData["orig_image"].subimage(
-                star.x, star.y, 19, 19
+                star.x + 1, star.y + 1, 19, 19 ########################################## ADD 1 TO BOTH
             )
             # PSFSetupData["subimage"].write_fits("nov25")
             PSFSetupData["fwhm"] = fwhm
@@ -107,7 +107,8 @@ def GeneralPSFDriver():  # for general PSF Gaussian
             all_params["sigma_y2"].append(params["sigma_y2"].value)
             all_params["x"].append(star.x)
             all_params["y"].append(star.y)
-
+        
+        print("\n\n" + "SUMMARY")
         print("Number of stars successfully analyzed:", len(starlist) - skip_count)
         print(
             "sigma_x2", str(np.average([x for x in all_params["sigma_x2"] if x < 10]))
@@ -122,7 +123,7 @@ def GeneralPSFDriver():  # for general PSF Gaussian
 
 def main():
     GeneralPSFDriver()
-
+    
 
 if __name__ == "__main__":
     main()

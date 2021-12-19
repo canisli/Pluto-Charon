@@ -1,18 +1,3 @@
-# https://witeboard.com/0bbe7650-4839-11ec-87f9-5f988fea8bbc
-
-"""
-ignore this for now
-USAGE:
-$ python3 GaussianModel.py date output_path
-    date = MM-DD-YYYY date in which image was taken (this is the name of the data folder)
-    output_path = path to output csv file to write to
-or
-$ python3 GaussianModel.py input_path
-    - read from existing values
-    input_path = path to csv file previously generated from above usage
-"""
-
-
 import math
 import sys
 
@@ -26,7 +11,9 @@ import matplotlib.pyplot as plt
 from IStar import IStar
 from Image import Image, get_image_hdu_number
 
-
+# Superclass
+# Contains method to estimate parameters with least squares fitting. 
+# PSF and PSF_error functions need to be implemented.
 class GaussianModel:
     def __init__(self, PSFSetupData):
         self.PSFSetupData = PSFSetupData
@@ -55,7 +42,7 @@ class GaussianModel:
             method="least_squares",
         )
         # print(LMFitResult.params)
-        # print(fit_report(LMFitResult))
+        print(fit_report(LMFitResult))
         self.LMparams = LMFitResult.params
         return self.LMparams
 
@@ -65,7 +52,8 @@ class GaussianModel:
     def psf_error(self):
         pass
 
-
+# Gaussian Model for stars in the image
+# Estimates A, B, sigma_x2, sigma_y2, and the center of the star
 class StarGaussian(GaussianModel):
     def __init__(self, PSFSetupData):
         center_x = PSFSetupData["star_x"]
@@ -101,8 +89,8 @@ class StarGaussian(GaussianModel):
         my = int(subimage.height / 2 + 1)
         xc = LMparams["xc"].value
         yc = LMparams["yc"].value
-        dx = dx + mx - xc
-        dy = dy + my - yc
+        dx = dx + mx - (xc-1)
+        dy = dy + my - (yc-1) #maybe (yc-1)
         sigma_x2 = LMparams["sigma_x2"].value
         sigma_y2 = LMparams["sigma_y2"].value
         return a * math.exp(-(dx ** 2 / (2 * sigma_x2) + dy ** 2 / (2 * sigma_y2))) + b
@@ -111,7 +99,8 @@ class StarGaussian(GaussianModel):
         errors = [vals[i] - self.psf(LMparams, xs[i], ys[i]) for i in range(len(vals))]
         return errors
 
-
+# Gaussian Model for Pluto Charon blob
+# Estimates A_p, A_c, B, and the centers of Pluto and Charon
 class PlutoCharonGaussian(GaussianModel):
     def __init__(self, PlutoCharonSetupData):
         self.LMparams = Parameters()
