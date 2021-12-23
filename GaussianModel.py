@@ -10,9 +10,10 @@ import matplotlib.pyplot as plt
 
 from IStar import IStar
 from Image import Image, get_image_hdu_number
+import config
 
 # Superclass
-# Contains method to estimate parameters with least squares fitting. 
+# Contains method to estimate parameters with least squares fitting.
 # PSF and PSF_error functions need to be implemented.
 class GaussianModel:
     def __init__(self, PSFSetupData):
@@ -20,12 +21,13 @@ class GaussianModel:
 
     def get_params(self):
         subimage = self.PSFSetupData["subimage"]
-        xc = int(subimage.width / 2 + 1)
-        yc = int(subimage.height / 2 + 1)
-        # xc = self.LMparams["xc"].value
-        # yc = self.LMparams["yc"].value
-        xs = [x - xc for x in range(subimage.width) for y in range(subimage.height)]
-        ys = [y - yc for x in range(subimage.width) for y in range(subimage.height)]
+        print("and I oop")
+        # xc = subimage.width / 2.0
+        # yc = subimage.height / 2.0
+        xc = self.LMparams["xc"].value
+        yc = self.LMparams["yc"].value
+        xs = [x for x in range(subimage.width) for y in range(subimage.height)]
+        ys = [y for x in range(subimage.width) for y in range(subimage.height)]
         vals = [
             subimage.get_pixel(x, y)
             for x in range(subimage.width)
@@ -41,8 +43,8 @@ class GaussianModel:
             ),
             method="least_squares",
         )
-        # print(LMFitResult.params)
-        print(fit_report(LMFitResult))
+        if config.do_debugging_for_gaussian:
+            print(fit_report(LMFitResult))
         self.LMparams = LMFitResult.params
         return self.LMparams
 
@@ -51,6 +53,7 @@ class GaussianModel:
 
     def psf_error(self):
         pass
+
 
 # Gaussian Model for stars in the image
 # Estimates A, B, sigma_x2, sigma_y2, and the center of the star
@@ -70,8 +73,10 @@ class StarGaussian(GaussianModel):
         sigma2 = (PSFSetupData["fwhm"] / 2.355) ** 2
 
         self.LMparams = Parameters()
-        self.LMparams.add("xc", value=(int)(PSFSetupData["subimage"].width / 2 + 1))
-        self.LMparams.add("yc", value=(int)(PSFSetupData["subimage"].height / 2 + 1))
+        self.LMparams.add(
+            "xc", value=PSFSetupData["subimage"].width / 2
+        )  # float division
+        self.LMparams.add("yc", value=PSFSetupData["subimage"].height / 2)
         self.LMparams.add("a", value=a)
         self.LMparams.add("b", value=PSFSetupData["avg_pixel_val"])
         self.LMparams.add("sigma_x2", value=sigma2)
@@ -81,16 +86,14 @@ class StarGaussian(GaussianModel):
     def get_params(self):
         return super().get_params()
 
-    def psf(self, LMparams, dx, dy):
+    def psf(self, LMparams, x, y):
         a = LMparams["a"].value
         b = LMparams["b"].value
         subimage = self.PSFSetupData["subimage"]
-        mx = int(subimage.width / 2 + 1)
-        my = int(subimage.height / 2 + 1)
         xc = LMparams["xc"].value
         yc = LMparams["yc"].value
-        dx = dx + mx - (xc-1)
-        dy = dy + my - (yc-1) #maybe (yc-1)
+        dx = x - xc
+        dy = y - yc
         sigma_x2 = LMparams["sigma_x2"].value
         sigma_y2 = LMparams["sigma_y2"].value
         return a * math.exp(-(dx ** 2 / (2 * sigma_x2) + dy ** 2 / (2 * sigma_y2))) + b
@@ -98,6 +101,7 @@ class StarGaussian(GaussianModel):
     def psf_error(self, LMparams, xs, ys, vals):
         errors = [vals[i] - self.psf(LMparams, xs[i], ys[i]) for i in range(len(vals))]
         return errors
+
 
 # Gaussian Model for Pluto Charon blob
 # Estimates A_p, A_c, B, and the centers of Pluto and Charon
