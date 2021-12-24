@@ -14,8 +14,9 @@ from IStar import IStar
 import config
 
 SL = 19  # side length of subimage
-home = str(Path.home())
-path = home + "/dev/Pluto-Charon/data/"
+# home = str(Path.home())
+# path = home + "/dev/Pluto-Charon/data/"
+path = config.data_folder
 
 outside = True
 inside = True
