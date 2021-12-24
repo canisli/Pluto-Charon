@@ -37,6 +37,10 @@ def StarPSFDriver():  # for star PSF Gaussian
     # output_path = "./out/Gaussian/" + sys.argv[2] + ".csv"
     path = config.data_folder + "/4-25-2021/pluto_V.fits"
     starlist_path = config.data_folder + "4-25-2021/starlist.csv"
+
+    # path = config.data_folder + "/5-13-2021/pluto_V.fits"
+    # starlist_path = config.data_folder + "5-13-2021/starlist.csv"
+
     starlist = Table.read(starlist_path, format="csv")
     output_path = (
         config.output_folder + "Gaussian/" + time.strftime("%m-%d-%y") + ".csv"
@@ -71,9 +75,12 @@ def StarPSFDriver():  # for star PSF Gaussian
             if star.counts < 0:
                 skip = True
         for j in range(len(starlist)):
-            # ignore stars that are within 25 pixels of the current star to avoid interference
+            # ignore stars that are within ... pixels of the current star to avoid interference
             star2 = IStar(table_row=starlist[j])
-            if i != j and distance(star.x, star2.x, star.y, star2.y) < 50:
+            if (
+                i != j
+                and distance(star.x, star2.x, star.y, star2.y) < config.min_distance
+            ):
                 skip = True
         # stars that are too close to the border
         if star.x < 11 or star.x > image.width - 11:

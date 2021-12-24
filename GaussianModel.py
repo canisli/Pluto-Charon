@@ -21,7 +21,6 @@ class GaussianModel:
 
     def get_params(self):
         subimage = self.PSFSetupData["subimage"]
-        print("and I oop")
         # xc = subimage.width / 2.0
         # yc = subimage.height / 2.0
         xc = self.LMparams["xc"].value

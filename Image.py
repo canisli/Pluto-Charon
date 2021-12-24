@@ -1,8 +1,8 @@
 """
+Contains Image Class. Main method writes the images starlist to the data directory
 USAGE:
-$ python3 Image.py file_path output_path
+$ python3 Image.py file_path
     file_path = path to fits file
-    output_path (optional) = path to output csv file to write to
 """
 
 import math
@@ -15,6 +15,7 @@ from astropy.io import fits
 from astropy.table import Table
 
 from IStar import IStar
+import config
 
 
 def parse_file_name(file_name):
@@ -30,7 +31,7 @@ def get_image_hdu_number(hdul):
     Get index of ImageHDU from HDUList
     """
     for n in [0, 1]:
-        if 'EXPOSURE' in hdul[n].header:
+        if "EXPOSURE" in hdul[n].header:
             return n
     print("get_image_hdu_number: Cannot find valid HDU keywords")
     raise ValueError
@@ -116,10 +117,13 @@ class Image:
         center_x = int(center_x)
         center_y = int(center_y)
         subimage = Image(width=subimage_width, height=subimage_height)
-        for x in range(-int(subimage_width/2), int(subimage_width/2)+1):
-            for y in range(-int(subimage_height/2), int(subimage_height/2)+1):
-                subimage.set_pixel((int)(subimage_width/2)+x, (int)(subimage_height /
-                                   2)+y, self.get_pixel(center_x + x, center_y + y))
+        for x in range(-int(subimage_width / 2), int(subimage_width / 2) + 1):
+            for y in range(-int(subimage_height / 2), int(subimage_height / 2) + 1):
+                subimage.set_pixel(
+                    (int)(subimage_width / 2) + x,
+                    (int)(subimage_height / 2) + y,
+                    self.get_pixel(center_x + x, center_y + y),
+                )
         return subimage
 
     def set_pixel(self, x, y, val):
@@ -149,7 +153,8 @@ class Image:
         if file_name_string is None:
             if not self.based_on_existing_file:
                 print(
-                    "write_fits: Image is not based on existing file. A specified file name is required")
+                    "write_fits: Image is not based on existing file. A specified file name is required"
+                )
                 raise ValueError
             else:  # overwrite existing file
                 with fits.open(self.file_name) as hdul:
@@ -161,12 +166,12 @@ class Image:
             if self.based_on_existing_file:
                 with fits.open(self.file_name) as hdul:
                     hdul[get_image_hdu_number(hdul)].data = self.data
-                    hdul[get_image_hdu_number(hdul)].header['EXPOSURE'] = 0
+                    hdul[get_image_hdu_number(hdul)].header["EXPOSURE"] = 0
                     hdul.writeto(file_name_string, overwrite=True)
             else:
                 primary_hdu = fits.PrimaryHDU()
                 image_hdu = fits.ImageHDU(self.data.tolist())
-                image_hdu.header['EXPOSURE'] = 0
+                image_hdu.header["EXPOSURE"] = 0
                 new_hdul = fits.HDUList([primary_hdu, image_hdu])
                 self.file_name = parse_file_name(file_name_string)
                 new_hdul.writeto(self.file_name, overwrite=True)
@@ -179,7 +184,7 @@ class Image:
             try:
                 return hdul[get_image_hdu_number(hdul)].header[name.upper()]
             except KeyError:
-                print('ERROR: Keyword \'' + str(name) + '\' not found')
+                print("ERROR: Keyword '" + str(name) + "' not found")
 
     def get_stars(self):
         """
@@ -193,11 +198,14 @@ class Image:
             stars = []
             for i in range(len(table)):
                 stars.append(
-                    IStar(star_name=get_star_attribute(star_data[i], 0),
-                          x=get_star_attribute(star_data[i], 1),
-                          y=get_star_attribute(star_data[i], 2),
-                          magnitude=get_star_attribute(star_data[i], 5),
-                          counts=get_star_attribute(star_data[i], 7)))
+                    IStar(
+                        star_name=get_star_attribute(star_data[i], 0),
+                        x=get_star_attribute(star_data[i], 1),
+                        y=get_star_attribute(star_data[i], 2),
+                        magnitude=get_star_attribute(star_data[i], 5),
+                        counts=get_star_attribute(star_data[i], 7),
+                    )
+                )
         return stars
 
     def plot_intensity_profile(self, center_x, center_y):
@@ -206,10 +214,9 @@ class Image:
         for x in range(round(center_x) - 20, round(center_x) + 20 + 1):
             for y in range(round(center_y) - 20, round(center_y) + 20 + 1):
                 if self.is_inside(x, y):
-                    distance_from_star.append(
-                        distance(x, y, center_x, center_y))
+                    distance_from_star.append(distance(x, y, center_x, center_y))
                     values.append(self.get_pixel(x, y))
-        plt.plot(distance_from_star, values, 'o')
+        plt.plot(distance_from_star, values, "o")
         plt.xlabel("Distance to star")
         plt.ylabel("Pixel Value")
         plt.savefig(self.file_name[0:-5] + "_graph.png")
@@ -217,18 +224,23 @@ class Image:
 
     def __str__(self):
         if self.file_name is not None:
-            return ("Image " + str(self.file_name) + ": "
-                    + str(self.width) + " x " + str(self.height))
+            return (
+                "Image "
+                + str(self.file_name)
+                + ": "
+                + str(self.width)
+                + " x "
+                + str(self.height)
+            )
         else:
-            return ("Image: "
-                    + str(self.width) + " x " + str(self.height))
+            return "Image: " + str(self.width) + " x " + str(self.height)
 
     def __del__(self):
         print("Destroyed " + str(self))
 
 
 def log_stars(stars, out_path):
-    output = {"name": [], "x": [], "y": [], "mag": [], 'counts': []}
+    output = {"name": [], "x": [], "y": [], "mag": [], "counts": []}
     for star in stars:
         output["name"].append(star.star_name)
         output["x"].append(star.x)
@@ -243,10 +255,10 @@ def main():
     if n < 2:
         print("Invalid arguments")
         raise Exception
-    file_path = "./data/" + sys.argv[1] + "/pluto_V.fits"
+    file_path = config.data_folder + sys.argv[1] + "/pluto_V.fits"
     output_path = None
     if len(sys.argv) > 2:
-        output_path = "./out/" + sys.argv[2] + ".csv"
+        output_path = config.data_folder + sys.argv[1] + "/starlist.csv"
 
     image = Image(file_name=file_path)
     if output_path:

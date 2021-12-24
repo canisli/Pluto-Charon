@@ -46,6 +46,9 @@ while outside:
         sn = int(input("\nChoose star: "))
 
         star = IStar(table_row=starlist[sn - 1])
-        temp = tempfile.NamedTemporaryFile(prefix=star.star_name, suffix=".fits")
+        name = star.star_name
+        if name == "N/A":
+            name = "noname"
+        temp = tempfile.NamedTemporaryFile(prefix=name, suffix=".fits")
         image.subimage(star.x + 1, star.y + 1, 19, 19).write_fits(temp.name)
         subprocess.call(["open", temp.name])
