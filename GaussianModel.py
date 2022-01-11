@@ -23,8 +23,8 @@ class GaussianModel:
         subimage = self.PSFSetupData["subimage"]
         # xc = subimage.width / 2.0
         # yc = subimage.height / 2.0
-        xc = self.LMparams["xc"].value
-        yc = self.LMparams["yc"].value
+        #xc = self.LMparams["xc"].value
+        #yc = self.LMparams["yc"].value
         xs = [x for x in range(subimage.width) for y in range(subimage.height)]
         ys = [y for x in range(subimage.width) for y in range(subimage.height)]
         vals = [
@@ -105,15 +105,16 @@ class StarGaussian(GaussianModel):
 # Gaussian Model for Pluto Charon blob
 # Estimates A_p, A_c, B, and the centers of Pluto and Charon
 class PlutoCharonGaussian(GaussianModel):
-    def __init__(self, PlutoCharonSetupData):
+    def __init__(self, PSFSetupData):
+        self.PSFSetupData = PSFSetupData
         self.LMparams = Parameters()
-        self.LMparams.add("x_0p", value=self.PlutoCharonSetupData["x_0p"])
-        self.LMparams.add("y_0p", value=self.PlutoCharonSetupData["y_0p"])
-        self.LMparams.add("x_0c", value=self.PlutoCharonSetupData["x_0c"])
-        self.LMparams.add("y_0c", value=self.PlutoCharonSetupData["y_0c"])
-        self.LMparams.add("a_p", value=self.PlutoCharonSetupData["init_Ap"])
-        self.LMparams.add("a_c", value=self.PlutoCharonSetupData["init_Ac"])
-        self.LMparams.add("b", value=self.PlutoCharonSetupData["init_background"])
+        self.LMparams.add("x_0p", value=self.PSFSetupData["x_0p"])
+        self.LMparams.add("y_0p", value=self.PSFSetupData["y_0p"])
+        self.LMparams.add("x_0c", value=self.PSFSetupData["x_0c"])
+        self.LMparams.add("y_0c", value=self.PSFSetupData["y_0c"])
+        self.LMparams.add("a_p", value=self.PSFSetupData["init_Ap"])
+        self.LMparams.add("a_c", value=self.PSFSetupData["init_Ac"])
+        self.LMparams.add("b", value=self.PSFSetupData["init_background"])
 
     def get_params(self):
         """
@@ -125,8 +126,8 @@ class PlutoCharonGaussian(GaussianModel):
         a_c = LMparams["a_c"].value
         a_p = LMparams["a_p"].value
         b = LMparams["b"].value
-        sigma_x2 = self.PlutoCharonSetupData["sigma_x2"]
-        sigma_y2 = self.PlutoCharonSetupData["sigma_y2"]
+        sigma_x2 = self.PSFSetupData["sigma_x2"]
+        sigma_y2 = self.PSFSetupData["sigma_y2"]
         # center of pluto + displacement relative to pluto = center of subimage + displacement relative to center of subimage
         # ==> displacement relative to pluto = center of subimage + displacement relative to subimage - center of pluto
         x_c = 10 + dx - (10 + LMparams["x_0c"].value)  # dx offset from pluto center

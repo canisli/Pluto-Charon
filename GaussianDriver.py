@@ -1,5 +1,7 @@
 import time
 
+from numpy import true_divide
+
 from GaussianModel import *
 import config
 
@@ -137,7 +139,11 @@ def main():
     ##############################################################
     """
     )
-    StarPSFDriver()
+    doStarGaussian = False
+    if doStarGaussian:
+        StarPSFDriver()
+    else:
+        PlutoCharonDriver()
 
 
 if __name__ == "__main__":
