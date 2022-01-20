@@ -21,10 +21,6 @@ class GaussianModel:
 
     def get_params(self):
         subimage = self.PSFSetupData["subimage"]
-        # xc = subimage.width / 2.0
-        # yc = subimage.height / 2.0
-        #xc = self.LMparams["xc"].value
-        #yc = self.LMparams["yc"].value
         xs = [x for x in range(subimage.width) for y in range(subimage.height)]
         ys = [y for x in range(subimage.width) for y in range(subimage.height)]
         vals = [
@@ -122,22 +118,20 @@ class PlutoCharonGaussian(GaussianModel):
         """
         return super().get_params()
 
-    def psf(self, LMparams, dx, dy):
+    def psf(self, LMparams, x, y):
         a_c = LMparams["a_c"].value
         a_p = LMparams["a_p"].value
         b = LMparams["b"].value
         sigma_x2 = self.PSFSetupData["sigma_x2"]
         sigma_y2 = self.PSFSetupData["sigma_y2"]
-        # center of pluto + displacement relative to pluto = center of subimage + displacement relative to center of subimage
-        # ==> displacement relative to pluto = center of subimage + displacement relative to subimage - center of pluto
-        x_c = 10 + dx - (10 + LMparams["x_0c"].value)  # dx offset from pluto center
-        y_c = dy - LMparams["y_0c"].value
-        x_p = dx - LMparams["x_0p"].value
-        y_p = dy - LMparams["y_0p"].value
+        dx_c = x - LMparams["x_0c"].value;
+        dy_c = y - LMparams["y_0c"].value
+        dx_p = x - LMparams["x_0p"].value
+        dy_p = y - LMparams["y_0p"].value
         return (
-            a_c * math.exp(-((x_c ** 2 / (2 * sigma_x2)) + (y_c ** 2 / (2 * sigma_y2))))
+            a_c * math.exp(-((dx_c ** 2 / (2 * sigma_x2)) + (dy_c ** 2 / (2 * sigma_y2))))
             + a_p
-            * math.exp(-((x_p ** 2 / (2 * sigma_x2)) + (y_p ** 2 / (2 * sigma_y2))))
+            * math.exp(-((dx_p ** 2 / (2 * sigma_x2)) + (dy_p ** 2 / (2 * sigma_y2))))
             + b
         )
 
@@ -147,18 +141,18 @@ class PlutoCharonGaussian(GaussianModel):
 
 
 def locate_pluto_charon(PlutoCharonSetupData):
-    scale = 1
+    scale = 0.5
     dx_p = np.array([1, 1, -1, -1]) * scale
     dy_p = np.array([1, -1, -1, 1]) * scale
     dx_c = np.array([-1, 1, 1, -1]) * scale
     dy_c = np.array([-1, -1, -1, -1]) * scale
+    guess_x = PlutoCharonSetupData["subimage"].width/2
+    guess_y = PlutoCharonSetupData["subimage"].height/2
     for i in range(len(dx_p)):  # test the four locations as per the convergence diagram
-        # These coordinates are relative to the center of the subimage
-        PlutoCharonSetupData["x_0p"] = 10 + dx_p[i]
-        # CHANGE 10 TO MIDDLE OF SUBIMAGE LATER
-        PlutoCharonSetupData["y_0p"] = 10 + dy_p[i]
-        PlutoCharonSetupData["x_0c"] = 10 + dx_c[i]
-        PlutoCharonSetupData["y_0c"] = 10 + dy_c[i]
+        PlutoCharonSetupData["x_0p"] = guess_x + dx_p[i]
+        PlutoCharonSetupData["y_0p"] = guess_y + dy_p[i]
+        PlutoCharonSetupData["x_0c"] = guess_x + dx_c[i]
+        PlutoCharonSetupData["y_0c"] = guess_y + dy_c[i]
         pluto_charon = PlutoCharonGaussian(PlutoCharonSetupData)
         params = pluto_charon.get_params()
         print("Locations after fitting")

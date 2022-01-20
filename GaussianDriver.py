@@ -17,6 +17,7 @@ def PlutoCharonDriver():
     PlutoCharonSetupData["subimage"] = PlutoCharonSetupData["orig_image"].subimage(
         blob_center_x, blob_center_y, 19, 19
     )
+    PlutoCharonSetupData["subimage"].write_fits("plutocharon.fits")
     # estimate based off grabbing values from ds9
     PlutoCharonSetupData["init_background"] = 4000
     PlutoCharonSetupData["init_Ap"] = 5 / 6 * counts  # guess
@@ -139,8 +140,7 @@ def main():
     ##############################################################
     """
     )
-    doStarGaussian = False
-    if doStarGaussian:
+    if config.do_star_gaussian:
         StarPSFDriver()
     else:
         PlutoCharonDriver()
