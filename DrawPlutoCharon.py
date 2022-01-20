@@ -23,5 +23,5 @@ min_clip = 4000
 display_image[display_image<min_clip] = min_clip + 1 # will remove the 'static' of white dots
 plt.imshow(display_image, norm=LogNorm(vmin=min_clip, vmax=5000), cmap='Greys_r')
 
-plt.scatter([x_c, x_p], [y_c,y_p]  facecolors='none', edgecolors=['b', 'r'])
+plt.scatter([x_c, x_p], [y_c,y_p] , facecolors='none', edgecolors=['b', 'r'])
 plt.show()
