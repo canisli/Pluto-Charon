@@ -20,8 +20,8 @@ def PlutoCharonDriver():
     PlutoCharonSetupData["subimage"].write_fits("plutocharon.fits")
     # estimate based off grabbing values from ds9
     PlutoCharonSetupData["init_background"] = 4000
-    PlutoCharonSetupData["init_Ap"] = 5 / 6 * counts  # guess
-    PlutoCharonSetupData["init_Ac"] = 1 / 6 * counts
+    PlutoCharonSetupData["init_Ap"] = 0.844 * counts # Pluto Charon on April 25, 2021
+    PlutoCharonSetupData["init_Ac"] = 0.156 * counts
     PlutoCharonSetupData["blob_center_x"] = blob_center_x
     PlutoCharonSetupData["blob_center_y"] = blob_center_y
     # average from GaussianModel.get_params
