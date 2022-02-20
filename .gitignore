@@ -1,0 +1,7 @@
+**/.DS_Store
+*.fits
+get_pixel_test.py
+pluto_setup.py
+pdf/
+star_match/
+__pycache__
