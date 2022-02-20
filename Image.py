@@ -256,9 +256,7 @@ def main():
         print("Invalid arguments")
         raise Exception
     file_path = config.data_folder + sys.argv[1] + "/pluto_V.fits"
-    output_path = None
-    if len(sys.argv) > 2:
-        output_path = config.data_folder + sys.argv[1] + "/starlist.csv"
+    output_path = config.data_folder + sys.argv[1] + "/starlist.csv"
 
     image = Image(file_name=file_path)
     if output_path:

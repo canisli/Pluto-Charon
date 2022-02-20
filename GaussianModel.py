@@ -68,10 +68,8 @@ class StarGaussian(GaussianModel):
         sigma2 = (PSFSetupData["fwhm"] / 2.355) ** 2
 
         self.LMparams = Parameters()
-        self.LMparams.add(
-            "xc", value=PSFSetupData["subimage"].width / 2
-        )  # float division
-        self.LMparams.add("yc", value=PSFSetupData["subimage"].height / 2)
+        self.LMparams.add("xc", value=PSFSetupData["subimage"].width / 2 - 0.5)
+        self.LMparams.add("yc", value=PSFSetupData["subimage"].height / 2 - 0.5)
         self.LMparams.add("a", value=a)
         self.LMparams.add("b", value=PSFSetupData["avg_pixel_val"])
         self.LMparams.add("sigma_x2", value=sigma2)
@@ -84,7 +82,6 @@ class StarGaussian(GaussianModel):
     def psf(self, LMparams, x, y):
         a = LMparams["a"].value
         b = LMparams["b"].value
-        subimage = self.PSFSetupData["subimage"]
         xc = LMparams["xc"].value
         yc = LMparams["yc"].value
         dx = x - xc
@@ -141,13 +138,16 @@ class PlutoCharonGaussian(GaussianModel):
 
 
 def locate_pluto_charon(PlutoCharonSetupData):
-    scale = 0.5
+    scale = 1
     dx_p = np.array([1, 1, -1, -1]) * scale
-    dy_p = np.array([1, -1, -1, 1]) * scale
+    dy_p = np.array([1, 1, 1, 1]) * scale
     dx_c = np.array([-1, 1, 1, -1]) * scale
     dy_c = np.array([-1, -1, -1, -1]) * scale
-    guess_x = PlutoCharonSetupData["subimage"].width/2
-    guess_y = PlutoCharonSetupData["subimage"].height/2
+    #guess_x = PlutoCharonSetupData["subimage"].width/2
+    #guess_y = PlutoCharonSetupData["subimage"].height/2
+    guess_x = 9
+    guess_y = 9
+    print("Intial guesses", guess_x, guess_y)
     for i in range(len(dx_p)):  # test the four locations as per the convergence diagram
         PlutoCharonSetupData["x_0p"] = guess_x + dx_p[i]
         PlutoCharonSetupData["y_0p"] = guess_y + dy_p[i]
@@ -158,6 +158,8 @@ def locate_pluto_charon(PlutoCharonSetupData):
         print("Locations after fitting")
         print("Pluto: ", params["x_0p"].value, params["y_0p"].value)
         print("Charon: ", params["x_0c"].value, params["y_0c"].value)
+        if config.do_pauses_for_gaussian:
+            input("Press enter to keep going")
 
 
 def distance(x1, x2, y1, y2):

@@ -193,7 +193,7 @@ N/A located at x=445.93 and y=378.49 with magnitude N/A and counts 7480.0
 N/A located at x=966.86 and y=916.77 with magnitude N/A and counts 7385.0
 N/A located at x=716.75 and y=122.06 with magnitude N/A and counts 7377.0
 N/A located at x=17.383 and y=462.28 with magnitude N/A and counts 7285.0
-N/A located at x=566.26 and y=568.26 with magnitude N/A and counts 7234.0
+STARNEARPLUTO located at x=566.26 and y=568.26 with magnitude N/A and counts 7234.0
 N/A located at x=231.43 and y=275.03 with magnitude N/A and counts 7210.0
 N/A located at x=373.14 and y=39.949 with magnitude N/A and counts 7097.0
 N/A located at x=925.89 and y=420.84 with magnitude N/A and counts 7088.0
