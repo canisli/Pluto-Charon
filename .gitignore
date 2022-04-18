@@ -2,6 +2,7 @@
 *.fits
 get_pixel_test.py
 pluto_setup.py
+star_finder.py
 pdf/
 star_match/
 __pycache__
