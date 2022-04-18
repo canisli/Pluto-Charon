@@ -208,6 +208,17 @@ class Image:
                 )
         return stars
 
+    def save_starlist(self, out_path):
+        stars = self.get_stars()
+        output = {"name": [], "x": [], "y": [], "mag": [], "counts": []}
+        for star in stars:
+            output["name"].append(star.star_name)
+            output["x"].append(star.x)
+            output["y"].append(star.y)
+            output["mag"].append(star.magnitude)
+            output["counts"].append(star.counts)
+        Table(output).write(out_path, format="csv", overwrite=True)
+
     def plot_intensity_profile(self, center_x, center_y):
         distance_from_star = []  # x
         values = []  # y
@@ -237,31 +248,3 @@ class Image:
 
     def __del__(self):
         print("Destroyed " + str(self))
-
-
-def log_stars(stars, out_path):
-    output = {"name": [], "x": [], "y": [], "mag": [], "counts": []}
-    for star in stars:
-        output["name"].append(star.star_name)
-        output["x"].append(star.x)
-        output["y"].append(star.y)
-        output["mag"].append(star.magnitude)
-        output["counts"].append(star.counts)
-    Table(output).write(out_path, format="csv", overwrite=True)
-
-
-def main():
-    n = len(sys.argv)
-    if n < 2:
-        print("Invalid arguments")
-        raise Exception
-    file_path = config.data_folder + sys.argv[1] + "/pluto_V.fits"
-    output_path = config.data_folder + sys.argv[1] + "/starlist.csv"
-
-    image = Image(file_name=file_path)
-    if output_path:
-        log_stars(image.get_stars(), output_path)
-
-
-if __name__ == "__main__":
-    main()
