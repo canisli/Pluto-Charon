@@ -18,25 +18,15 @@ import config
 class GaussianModel:
     def __init__(self, PSFSetupData):
         self.PSFSetupData = PSFSetupData
+        self.subimage = self.PSFSetupData["subimage"]
 
     def get_params(self):
-        subimage = self.PSFSetupData["subimage"]
-        xs = [x for x in range(subimage.width) for y in range(subimage.height)]
-        ys = [y for x in range(subimage.width) for y in range(subimage.height)]
-        vals = [
-            subimage.get_pixel(x, y)
-            for x in range(subimage.width)
-            for y in range(subimage.height)
-        ]
         LMFitResult = minimize(
             self.psf_error,
             self.LMparams,
-            args=(
-                xs,
-                ys,
-                vals,
-            ),
+            args=(),
             method="least_squares",
+            max_nfev=14000
         )
         if config.do_debugging_for_gaussian:
             print(fit_report(LMFitResult))
@@ -54,6 +44,7 @@ class GaussianModel:
 # Estimates A, B, sigma_x2, sigma_y2, and the center of the star
 class StarGaussian(GaussianModel):
     def __init__(self, PSFSetupData):
+        super().__init__(PSFSetupData)
         center_x = PSFSetupData["star_x"]
         center_y = PSFSetupData["star_y"]
         image = PSFSetupData["orig_image"]
@@ -74,7 +65,6 @@ class StarGaussian(GaussianModel):
         self.LMparams.add("b", value=PSFSetupData["avg_pixel_val"])
         self.LMparams.add("sigma_x2", value=sigma2)
         self.LMparams.add("sigma_y2", value=sigma2)
-        super().__init__(PSFSetupData)
 
     def get_params(self):
         return super().get_params()
@@ -90,7 +80,15 @@ class StarGaussian(GaussianModel):
         sigma_y2 = LMparams["sigma_y2"].value
         return a * math.exp(-(dx ** 2 / (2 * sigma_x2) + dy ** 2 / (2 * sigma_y2))) + b
 
-    def psf_error(self, LMparams, xs, ys, vals):
+    def psf_error(self, LMparams):
+        subimage = self.subimage
+        xs = [x for x in range(subimage.width) for y in range(subimage.height)]
+        ys = [y for x in range(subimage.width) for y in range(subimage.height)]
+        vals = [
+            subimage.get_pixel(x, y)
+            for x in range(subimage.width)
+            for y in range(subimage.height)
+        ]
         errors = [vals[i] - self.psf(LMparams, xs[i], ys[i]) for i in range(len(vals))]
         return errors
 
@@ -99,7 +97,7 @@ class StarGaussian(GaussianModel):
 # Estimates A_p, A_c, B, and the centers of Pluto and Charon
 class PlutoCharonGaussian(GaussianModel):
     def __init__(self, PSFSetupData):
-        self.PSFSetupData = PSFSetupData
+        super().__init__(PSFSetupData)
         self.LMparams = Parameters()
         self.LMparams.add("x_0p", value=self.PSFSetupData["x_0p"])
         self.LMparams.add("y_0p", value=self.PSFSetupData["y_0p"])
@@ -132,7 +130,15 @@ class PlutoCharonGaussian(GaussianModel):
             + b
         )
 
-    def psf_error(self, LMparams, xs, ys, vals):
+    def psf_error(self, LMparams):
+        subimage = self.subimage
+        xs = [x for x in range(subimage.width) for y in range(subimage.height)]
+        ys = [y for x in range(subimage.width) for y in range(subimage.height)]
+        vals = [
+            subimage.get_pixel(x, y)
+            for x in range(subimage.width)
+            for y in range(subimage.height)
+        ]
         errors = [vals[i] - self.psf(LMparams, xs[i], ys[i]) for i in range(len(vals))]
         return errors
 

@@ -1,7 +1,5 @@
 import time
 
-from numpy import true_divide
-
 from GaussianModel import *
 import config
 import constants as c
@@ -15,7 +13,6 @@ def PlutoCharonDriver():
     PlutoCharonSetupData["subimage"] = PlutoCharonSetupData["orig_image"].subimage(
         blob_center_x, blob_center_y, 19, 19
     )
-    PlutoCharonSetupData["subimage"].write_fits("plutocharon.fits")
     # estimate based off grabbing values from ds9
     PlutoCharonSetupData["init_background"] = c.constants[config.date]['background']
     counts = c.constants[config.date]['pluto_charon_counts']
@@ -28,7 +25,6 @@ def PlutoCharonDriver():
     PlutoCharonSetupData["subimage"].write_fits(config.date + "_PC_subimage")
     print("Using sigma_x2=",  PlutoCharonSetupData["sigma_x2"])
     print("Using sigma_y2=",  PlutoCharonSetupData["sigma_y2"])
-    print("Value of get_pixel(5,5)", PlutoCharonSetupData["subimage"].get_pixel(5, 5))
     locate_pluto_charon(PlutoCharonSetupData)
 
 
@@ -83,11 +79,13 @@ def StarPSFDriver():  # for star PSF Gaussian
         if star.y < 11 or star.y > image.height - 11:
             skip = True
         if skip:
-            print("==================SKIPPED================")
+            if config.do_debugging_for_gaussian:
+                print("==================SKIPPED================")
             skip_count += 1
             continue
-
-        print("<" + str(i + 1) + ">\n", str(starlist[i]))
+        
+        if config.do_debugging_for_gaussian:
+            print("<" + str(i + 1) + ">\n", str(starlist[i]))
         PSFSetupData = {}
         PSFSetupData["star_x"] = star.x
         PSFSetupData["star_y"] = star.y
