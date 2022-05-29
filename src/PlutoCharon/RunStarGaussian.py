@@ -1,39 +1,14 @@
 import time
+import glob
 
 from GaussianModel import *
 from Image import *
 from res import config
-from res import constants as c
+from res.constants import *
 
-
-def PlutoCharonDriver():
-    PlutoCharonSetupData = {}
-    print("Analyzing pluto and charon on", config.date)
-    PlutoCharonSetupData["orig_image"] = Image(
-        config.data_folder + config.date + "/pluto_V.fits"
-    )
-    blob_center_x = c.constants[config.date]["blob_center_x"]
-    blob_center_y = c.constants[config.date]["blob_center_y"]
-    PlutoCharonSetupData["subimage"] = PlutoCharonSetupData["orig_image"].subimage(
-        blob_center_x, blob_center_y, 19, 19
-    )
-    # estimate based off grabbing values from ds9
-    PlutoCharonSetupData["init_background"] = c.constants[config.date]["background"]
-    counts = c.constants[config.date]["pluto_charon_counts"]
-    PlutoCharonSetupData["init_Ap"] = c.constants[config.date]["init_Ap_coeff"] * counts
-    PlutoCharonSetupData["init_Ac"] = c.constants[config.date]["init_Ac_coeff"] * counts
-
-    # average from GaussianModel.get_params
-    PlutoCharonSetupData["sigma_x2"] = c.constants[config.date]["sigma_x2"]
-    PlutoCharonSetupData["sigma_y2"] = c.constants[config.date]["sigma_y2"]
-    PlutoCharonSetupData["subimage"].write_fits(config.output_folder + config.date + "_PC_subimage")
-    print("Using sigma_x2=", PlutoCharonSetupData["sigma_x2"])
-    print("Using sigma_y2=", PlutoCharonSetupData["sigma_y2"])
-    locate_pluto_charon(PlutoCharonSetupData)
-
-
-def StarPSFDriver():  # for star PSF Gaussian
-    path = config.data_folder + config.date + "/pluto_V.fits"
+def main():
+    files = glob.glob(config.data_folder + config.date + "/*.fits").sort()
+    path = files[0]
     starlist_path = config.data_folder + config.date + "/starlist.csv"
 
     starlist = Table.read(starlist_path, format="csv")
@@ -124,17 +99,6 @@ def StarPSFDriver():  # for star PSF Gaussian
 
     Table(all_params).write(output_path, format="csv", overwrite=True)
     print("Wrote to file: " + output_path)
-
-
-def main():
-    ##############################################################
-    #    THE CENTERS RETURNED ARE 0 INDEXED. DS9 IS 1 INDEXED    #
-    ##############################################################
-    if config.do_star_gaussian:
-        StarPSFDriver()
-    else:
-        PlutoCharonDriver()
-
 
 if __name__ == "__main__":
     main()
