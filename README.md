@@ -9,6 +9,7 @@ This project will attempt to measure the orbital period of the Pluto/Charon syst
 * `src/PlutoCharon/Image.py`: represents a fits file
 * `src/PlutoCharon/IStar.py`: represents a star inside Image
 * `src/PlutoCharon/GaussianModel.py`: contains Gaussian models for running least squares minimization to determine point spread function of stars and Pluto/Charon
-* `src/PlutoCharon/GaussianDriver.py`: runs Gaussian model on data
+* `src/PlutoCharon/RunStarGaussian.py`: runs Gaussian model on each star in Image
+* `src/PlutoCharon/RunPlutoCharonGaussian.py`: runs Gaussian model on Pluto/Charon blob
 * `src/PlutoCharon/res/`: config and constants
 * `src/PlutoCharon/util/`: utility files mainly for testing and displaying results
