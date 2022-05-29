@@ -7,7 +7,9 @@ from res import config
 from res.constants import *
 
 def main():
-    files = glob.glob(config.data_folder + config.date + "/*.fits").sort()
+    print(config.data_folder + config.date + "/*.fits")
+    files = glob.glob(config.data_folder + config.date + "/*.fits")
+    files.sort()
     path = files[0]
     starlist_path = config.data_folder + config.date + "/starlist.csv"
 

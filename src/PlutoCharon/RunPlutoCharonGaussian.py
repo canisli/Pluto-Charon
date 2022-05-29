@@ -10,7 +10,8 @@ def main():
     PlutoCharonSetupData = {}
     print("Analyzing pluto and charon on", config.date)
 
-    files = glob.glob(config.data_folder + config.date + "/*.fits").sort()
+    files = glob.glob(config.data_folder + config.date + "/*.fits")
+    files.sort()
     PlutoCharonSetupData["orig_image"] = Image(files[0])
 
     blob_center_x = constants[config.date]["blob_center_x"]

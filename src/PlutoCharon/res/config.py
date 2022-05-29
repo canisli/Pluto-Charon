@@ -1,6 +1,6 @@
 data_folder = "/Users/Canis/dev/Pluto-Charon/data/"
 output_folder = "/Users/Canis/dev/Pluto-Charon/out/"
-date = "5-24-2021"  # data folder m-dd-yyyy
+date = "5-24-2022"  # data folder m-dd-yyyy
 
 min_distance = 50  # minimum distance between stars to perform Gaussian
 
