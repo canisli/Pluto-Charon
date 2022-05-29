@@ -35,7 +35,7 @@ class GaussianModel:
         pass
 
 
-# Gaussian Model for stars in the image
+# Single Gaussian Model for stars in the image
 # Estimates A, B, sigma_x2, sigma_y2, and the center of the star
 class StarGaussian(GaussianModel):
     def __init__(self, PSFSetupData):
@@ -88,7 +88,7 @@ class StarGaussian(GaussianModel):
         return errors
 
 
-# Gaussian Model for Pluto Charon blob
+# Double Gaussian Model for Pluto Charon blob
 # Estimates A_p, A_c, B, and the centers of Pluto and Charon
 class PlutoCharonGaussian(GaussianModel):
     def __init__(self, PSFSetupData):
