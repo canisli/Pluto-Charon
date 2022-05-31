@@ -1,4 +1,3 @@
-import time
 import glob
 
 from GaussianModel import *
@@ -15,7 +14,7 @@ def main():
 
     starlist = Table.read(starlist_path, format="csv")
     output_path = (
-        config.output_folder + config.date + "/" + time.strftime("%m-%d-%y") + ".csv"
+        config.output_folder + config.date + "/" + "gaussian_results.csv"
     )
 
     image = Image(path)

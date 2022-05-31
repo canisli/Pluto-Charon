@@ -28,7 +28,7 @@ def main():
     # average from GaussianModel.get_params
     PlutoCharonSetupData["sigma_x2"] = constants[config.date]["sigma_x2"]
     PlutoCharonSetupData["sigma_y2"] = constants[config.date]["sigma_y2"]
-    PlutoCharonSetupData["subimage"].write_fits(config.output_folder + config.date + "_PC_subimage")
+    PlutoCharonSetupData["subimage"].write_fits(config.output_folder + config.date + "/" + config.date + "_PC_subimage")
     print("Using sigma_x2=", PlutoCharonSetupData["sigma_x2"])
     print("Using sigma_y2=", PlutoCharonSetupData["sigma_y2"])
     locate_pluto_charon(PlutoCharonSetupData)
