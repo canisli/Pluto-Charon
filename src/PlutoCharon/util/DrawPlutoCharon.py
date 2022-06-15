@@ -7,16 +7,21 @@ import numpy as np
 from Image import Image
 from res import config
 
-x_p = 4.696478200520507 
+x_p = 4.696478200520507
 y_p = 8.889831536002246
 x_c = 10.212682325016397
 y_c = 9.984729078747533
 
 
-print("The pixel distance between pluto and charon is " + str(np.sqrt((x_p-x_c)**2+(y_p-y_c)**2)))
+print(
+    "The pixel distance between pluto and charon is "
+    + str(np.sqrt((x_p - x_c) ** 2 + (y_p - y_c) ** 2))
+)
 
 
-path = config.output_folder + config.date + "/" + config.date+ "_PC_subimage.fits"  # subimage
+path = (
+    config.output_folder + config.date + "/" + config.date + "_PC_subimage.fits"
+)  # subimage
 print(path)
 img = Image(path)
 plt.figure(figsize=(8, 8))

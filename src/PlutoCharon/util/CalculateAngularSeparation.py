@@ -1,19 +1,23 @@
-from res import config
 from astropy.coordinates import SkyCoord
+import astropy.units as u
+
+from res import config
+from res.constants import *
 
 # Calculate angular separation between pluto and charon and determine the distance in pixels between them
 
-# input data here
-pluto_ra = '20h02m41.92s'
-pluto_dec = '-22d30m53.3s'  ############# FIX TO DEGREE FORMAT ###################
-charon_ra = '20h02m41.98s' 
-charon_dec = '-22d30m53.2s'
-plate_scale = config[config.date + config.index]["plate_scale"] # arcseconds per pixel
+entry = constants[config.date + config.index]
+#plate_scale = entry["plate_scale"]  # arcseconds per pixel
 
-pluto = SkyCoord(ra=pluto_ra, dec=pluto_dec, frame='icrs')
-charon = SkyCoord(ra=charon_ra, dec=charon_dec, frame='icrs')
+pluto = SkyCoord(entry["pluto"], unit=(u.hourangle, u.deg), frame="icrs")
+charon = SkyCoord(entry["charon"], unit=(u.hourangle, u.deg), frame="icrs")
 
-sep = pluto.separation(charon).arcsecond/plate_scale
+sep = pluto.separation(charon)
+#pixel_sep = pluto.separation(charon).arcsecond/plate_scale
 
-print("The angular separation in arcseconds is ")
+print("Horizons System Ephermeris")
+print("The angular separation in pixels should be ")
+#print(pixel_sep)
+print("The angular separation in arcseconds should be ")
 print(sep)
+

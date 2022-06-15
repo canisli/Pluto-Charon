@@ -3,9 +3,12 @@ from Image import *
 from res import config
 from res.constants import *
 
+
 def main():
     path = config.data_folder + config.date + "/pluto" + config.index + ".fits"
-    starlist_path = config.data_folder + config.date + "/starlist" + config.index + ".csv"
+    starlist_path = (
+        config.data_folder + config.date + "/starlist" + config.index + ".csv"
+    )
 
     starlist = Table.read(starlist_path, format="csv")
     output_path = (
@@ -15,7 +18,7 @@ def main():
     image = Image(path)
     hdul = fits.open(path)
 
-    fwhm_arc = 3.5  # full width half maximum in arcseconds
+    fwhm_arc = 3.5  # full width half maximum in arcseconds # based on location in Rhode Island
     fwhm = (
         fwhm_arc / hdul[get_image_hdu_number(hdul)].header["CDELT1"]
     )  # fwhm in pixels
@@ -94,6 +97,7 @@ def main():
 
     Table(all_params).write(output_path, format="csv", overwrite=True)
     print("Wrote to file: " + output_path)
+
 
 if __name__ == "__main__":
     main()

@@ -59,6 +59,7 @@ class StarGaussian(GaussianModel):
         self.LMparams.add("yc", value=PSFSetupData["subimage"].height / 2 - 0.5)
         self.LMparams.add("a", value=a)
         self.LMparams.add("b", value=PSFSetupData["avg_pixel_val"])
+        print(sigma2)
         self.LMparams.add("sigma_x2", value=sigma2)
         self.LMparams.add("sigma_y2", value=sigma2)
 
@@ -141,7 +142,14 @@ class PlutoCharonGaussian(GaussianModel):
 
 
 def locate_pluto_charon(PlutoCharonSetupData):
-    locations = {"x_p": [], "y_p": [], "x_c": [], "y_c": [], "pixel_distance": [], "arcsecond_distance": []}
+    locations = {
+        "x_p": [],
+        "y_p": [],
+        "x_c": [],
+        "y_c": [],
+        "pixel_distance": [],
+        "arcsecond_distance": [],
+    }
     scale = 1
     dx_p = np.array([1, 1, -1, -1]) * scale
     dy_p = np.array([1, 1, 1, 1]) * scale
@@ -166,9 +174,26 @@ def locate_pluto_charon(PlutoCharonSetupData):
         locations["y_p"].append(params["y_0p"].value)
         locations["x_c"].append(params["x_0c"].value)
         locations["y_c"].append(params["y_0c"].value)
-        distance = math.sqrt((params["x_0p"].value - params["x_0c"].value)**2 + (params["y_0p"].value - params["y_0c"].value)**2)
+        distance = math.sqrt(
+            (params["x_0p"].value - params["x_0c"].value) ** 2
+            + (params["y_0p"].value - params["y_0c"].value) ** 2
+        )
         locations["pixel_distance"].append(distance)
-        locations["arcsecond_distance"].append(distance * constants[config.date + config.index]["plate_scale"])
+        arcsecond_distance = distance = math.sqrt(
+            (
+                constants[config.date + config.index]["plate_scale_x"]
+                * (params["x_0p"].value - params["x_0c"].value)
+            )
+            ** 2
+            + (
+                constants[config.date + config.index]["plate_scale_y"]
+                * (params["y_0p"].value - params["y_0c"].value)
+            )
+            ** 2
+        )
+        locations["arcsecond_distance"].append(
+            arcsecond_distance
+        )
         if config.do_pauses_for_gaussian:
             input("Press enter to keep going")
     return locations

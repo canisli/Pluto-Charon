@@ -5,6 +5,7 @@ from Image import *
 from res import config
 from res.constants import *
 
+
 def main():
     print(config.data_folder + config.date + "/*.fits")
     files = glob.glob(config.data_folder + config.date + "/*.fits")
@@ -18,7 +19,7 @@ def main():
     fwhm = (
         fwhm_arc / hdul[get_image_hdu_number(hdul)].header["CDELT1"]
     )  # fwhm in pixels
-    
+
     PSFSetupData = {}
     PSFSetupData["star_x"] = constants[config.date]["blob_center_x"]
     PSFSetupData["star_y"] = constants[config.date]["blob_center_y"]

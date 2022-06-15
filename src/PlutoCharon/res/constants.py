@@ -42,27 +42,35 @@ constants = {
         "nearby_star3_y": 1014.1 + 1,
     },
     "5-24-2022": {
-        "plate_scale": 0.332,
+        "plate_scale_x": 0.34,  # 0.332
+        "plate_scale_y": 0.34,
         # Pluto Charon
         "sigma_x2": 26.228502075539872,
         "sigma_y2": 20.787436346221913,
         "blob_center_x": 2594 + 1,
         "blob_center_y": 2084 + 1,
-        "pluto_charon_counts": 550,
+        "pluto_charon_counts": 100000,
         "background": 500,
         "init_Ap_coeff": 0.844,
         "init_Ac_coeff": 0.156,
+        # ephemeris
+        "pluto": "20 02 41.92 -22 30 53.3",
+        "charon": "20 02 41.98 -22 30 53.2",
     },
     "6-9-2022_A": {
-        "plate_scale": 0.332,
+        "plate_scale_x": 0.34,
+        "plate_scale_y": 0.34,
         # Pluto Charon
-        "sigma_x2": 20.2677550640564,
+        "sigma_x2": 20.267755064056400,
         "sigma_y2": 25.886545006613600,
         "blob_center_x": 2734.7,
         "blob_center_y": 2189.7,
-        "pluto_charon_counts": 550,
+        "pluto_charon_counts": 20000,
         "background": 500,
         "init_Ap_coeff": 0.844,
         "init_Ac_coeff": 0.156,
-    }
+        # ephemeris
+        "pluto": "20 01 44.85 -22 35 47.8",
+        "charon": "20 01 44.79 -22 35 48.0",
+    },
 }
