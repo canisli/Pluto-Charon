@@ -12,4 +12,4 @@ This project will attempt to measure the orbital period of the Pluto/Charon syst
 * `src/PlutoCharon/RunStarGaussian.py`: runs Gaussian model on each star in Image
 * `src/PlutoCharon/RunPlutoCharonGaussian.py`: runs Gaussian model on Pluto/Charon blob
 * `src/PlutoCharon/res/`: config and constants
-* `src/PlutoCharon/util/`: utility files mainly for testing and displaying results
+* `src/PlutoCharon/util/`: utility files
