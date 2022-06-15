@@ -1,3 +1,7 @@
+############################
+# outdated, need to update #
+############################
+
 from Image import *
 from GaussianModel import *
 from res import config

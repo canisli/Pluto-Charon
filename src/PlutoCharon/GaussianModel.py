@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from res import config
+from res.constants import *
 
 # Superclass
 # Contains method to estimate parameters with least squares fitting.
@@ -140,6 +141,7 @@ class PlutoCharonGaussian(GaussianModel):
 
 
 def locate_pluto_charon(PlutoCharonSetupData):
+    locations = {"x_p": [], "y_p": [], "x_c": [], "y_c": [], "pixel_distance": [], "arcsecond_distance": []}
     scale = 1
     dx_p = np.array([1, 1, -1, -1]) * scale
     dy_p = np.array([1, 1, 1, 1]) * scale
@@ -160,8 +162,16 @@ def locate_pluto_charon(PlutoCharonSetupData):
         print("Locations after fitting")
         print("Pluto: ", params["x_0p"].value, params["y_0p"].value)
         print("Charon: ", params["x_0c"].value, params["y_0c"].value)
+        locations["x_p"].append(params["x_0p"].value)
+        locations["y_p"].append(params["y_0p"].value)
+        locations["x_c"].append(params["x_0c"].value)
+        locations["y_c"].append(params["y_0c"].value)
+        distance = math.sqrt((params["x_0p"].value - params["x_0c"].value)**2 + (params["y_0p"].value - params["y_0c"].value)**2)
+        locations["pixel_distance"].append(distance)
+        locations["arcsecond_distance"].append(distance * constants[config.date + config.index]["plate_scale"])
         if config.do_pauses_for_gaussian:
             input("Press enter to keep going")
+    return locations
 
 
 def distance(x1, x2, y1, y2):

@@ -1,20 +1,15 @@
-import glob
-
 from GaussianModel import *
 from Image import *
 from res import config
 from res.constants import *
 
 def main():
-    print(config.data_folder + config.date + "/*.fits")
-    files = glob.glob(config.data_folder + config.date + "/*.fits")
-    files.sort()
-    path = files[0]
-    starlist_path = config.data_folder + config.date + "/starlist.csv"
+    path = config.data_folder + config.date + "/pluto" + config.index + ".fits"
+    starlist_path = config.data_folder + config.date + "/starlist" + config.index + ".csv"
 
     starlist = Table.read(starlist_path, format="csv")
     output_path = (
-        config.output_folder + config.date + "/" + "gaussian_results.csv"
+        config.output_folder + config.date + "/gaussian_results" + config.index + ".csv"
     )
 
     image = Image(path)
@@ -39,14 +34,13 @@ def main():
 
     for i in range(len(starlist)):
         star = IStar(table_row=starlist[i])
-
         # filter out bad stars
         skip = False
         if not isinstance(star.counts, str):  # if counts not "N/A"
             if star.counts < 0:
                 skip = True
         for j in range(len(starlist)):
-            # ignore stars that are within ... pixels of the current star to avoid interference
+            # ignore stars that are within certain amount of pixels of the current star to avoid interference
             star2 = IStar(table_row=starlist[j])
             if (
                 i != j
