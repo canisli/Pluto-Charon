@@ -1,3 +1,7 @@
+############################
+# outdated, need to update #
+############################
+
 # Utility to draw circles around Pluto and Charon given their locations
 
 from matplotlib.colors import LogNorm

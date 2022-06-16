@@ -12,3 +12,9 @@ N/A located at x=617.04 and y=541.05 with magnitude N/A and counts 18910.0
 
 6-9-2022
 A: 2734.7 2189.7
+B: 2735.2 2188.9
+
+
+
+
+J: 2591.6 2100.4

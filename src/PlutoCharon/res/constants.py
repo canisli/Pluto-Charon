@@ -70,7 +70,42 @@ constants = {
         "init_Ap_coeff": 0.844,
         "init_Ac_coeff": 0.156,
         # ephemeris
-        "pluto": "20 01 44.85 -22 35 47.8",
-        "charon": "20 01 44.79 -22 35 48.0",
+        "pluto": "300.43646 -22.59674",
+        "charon": "300.43623 -22.59677",
+        "date_obs": "2022-06-10T05:31:16.0",
     },
+    "6-9-2022_B": {
+        "plate_scale_x": 0.34,
+        "plate_scale_y": 0.34,
+        # Pluto Charon
+        "sigma_x2": 19.107172818638194,
+        "sigma_y2": 19.107172818638194,
+        "blob_center_x": 2735.2,
+        "blob_center_y": 2188.9,
+        "pluto_charon_counts": 20000,
+        "background": 500,
+        "init_Ap_coeff": 0.844,
+        "init_Ac_coeff": 0.156,
+        # ephemeris
+        "pluto": "",
+        "charon": "",
+    },
+    "6-9-2022_J": {
+        "plate_scale_x": 0.34,
+        "plate_scale_y": 0.34,
+        # Pluto Charon
+        "sigma_x2": 20,
+        "sigma_y2": 25,
+        "blob_center_x": 2591.6,
+        "blob_center_y": 2100.4,
+        "pluto_charon_counts": 20000,
+        "background": 500,
+        "init_Ap_coeff": 0.844,
+        "init_Ac_coeff": 0.156,
+        # ephemeris
+        "pluto": "300.43595 -22.59690",
+        "charon": "300.43572 -22.59693",
+        "date_obs": "2022-06-10T06:11:33.0",
+    },
+    # 19.107172818638194
 }

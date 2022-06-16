@@ -24,8 +24,7 @@ class GaussianModel:
             method="least_squares",
             max_nfev=14000,
         )
-        if config.do_debugging_for_gaussian:
-            print(fit_report(LMFitResult))
+        # print(fit_report(LMFitResult))
         self.LMparams = LMFitResult.params
         return self.LMparams
 
@@ -59,7 +58,6 @@ class StarGaussian(GaussianModel):
         self.LMparams.add("yc", value=PSFSetupData["subimage"].height / 2 - 0.5)
         self.LMparams.add("a", value=a)
         self.LMparams.add("b", value=PSFSetupData["avg_pixel_val"])
-        print(sigma2)
         self.LMparams.add("sigma_x2", value=sigma2)
         self.LMparams.add("sigma_y2", value=sigma2)
 
@@ -75,7 +73,7 @@ class StarGaussian(GaussianModel):
         dy = y - yc
         sigma_x2 = LMparams["sigma_x2"].value
         sigma_y2 = LMparams["sigma_y2"].value
-        return a * math.exp(-(dx**2 / (2 * sigma_x2) + dy**2 / (2 * sigma_y2))) + b
+        return a * np.exp(-(dx**2 / (2 * sigma_x2) + dy**2 / (2 * sigma_y2))) + b
 
     def psf_error(self, LMparams):
         subimage = self.subimage
@@ -103,6 +101,12 @@ class PlutoCharonGaussian(GaussianModel):
         self.LMparams.add("a_p", value=self.PSFSetupData["init_Ap"])
         self.LMparams.add("a_c", value=self.PSFSetupData["init_Ac"])
         self.LMparams.add("b", value=self.PSFSetupData["init_background"])
+        self.LMparams.add(
+            "sigma_x2", value=self.PSFSetupData["sigma_x2"], min=1, max=100
+        )
+        self.LMparams.add(
+            "sigma_y2", value=self.PSFSetupData["sigma_y2"], min=1, max=100
+        )
 
     def get_params(self):
         """
@@ -114,17 +118,18 @@ class PlutoCharonGaussian(GaussianModel):
         a_c = LMparams["a_c"].value
         a_p = LMparams["a_p"].value
         b = LMparams["b"].value
-        sigma_x2 = self.PSFSetupData["sigma_x2"]
-        sigma_y2 = self.PSFSetupData["sigma_y2"]
+        # sigma_x2 = self.PSFSetupData["sigma_x2"]
+        # sigma_y2 = self.PSFSetupData["sigma_y2"]
+        sigma_x2 = LMparams["sigma_x2"].value
+        sigma_y2 = LMparams["sigma_y2"].value
         dx_c = x - LMparams["x_0c"].value
         dy_c = y - LMparams["y_0c"].value
         dx_p = x - LMparams["x_0p"].value
         dy_p = y - LMparams["y_0p"].value
         return (
-            a_c
-            * math.exp(-((dx_c**2 / (2 * sigma_x2)) + (dy_c**2 / (2 * sigma_y2))))
+            a_c * np.exp(-((dx_c**2 / (2 * sigma_x2)) + (dy_c**2 / (2 * sigma_y2))))
             + a_p
-            * math.exp(-((dx_p**2 / (2 * sigma_x2)) + (dy_p**2 / (2 * sigma_y2))))
+            * np.exp(-((dx_p**2 / (2 * sigma_x2)) + (dy_p**2 / (2 * sigma_y2))))
             + b
         )
 
@@ -147,14 +152,17 @@ def locate_pluto_charon(PlutoCharonSetupData):
         "y_p": [],
         "x_c": [],
         "y_c": [],
-        "pixel_distance": [],
-        "arcsecond_distance": [],
+        "dx_pixel": [],
+        "dy_pixel": [],
+        "sigma_x2": [],
+        "sigma_y2": [],
     }
-    scale = 1
-    dx_p = np.array([1, 1, -1, -1]) * scale
-    dy_p = np.array([1, 1, 1, 1]) * scale
-    dx_c = np.array([-1, 1, 1, -1]) * scale
-    dy_c = np.array([-1, -1, -1, -1]) * scale
+    scale = 2
+    dx_p = np.array([1, 1, 1, -1, -1, -1, 1, 1, 1, -1, -1, -1]) * scale
+    dy_p = np.array([1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1]) * scale
+    dx_c = np.array([-1, 1, -1, 1, 1, -1, 1, -1, -1, 1, 1, -1]) * scale
+    dy_c = np.array([-1, -1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1]) * scale
+    1,
     # guess_x = PlutoCharonSetupData["subimage"].width/2
     # guess_y = PlutoCharonSetupData["subimage"].height/2
     guess_x = 9
@@ -168,34 +176,18 @@ def locate_pluto_charon(PlutoCharonSetupData):
         pluto_charon = PlutoCharonGaussian(PlutoCharonSetupData)
         params = pluto_charon.get_params()
         print("Locations after fitting")
+        print("Sigma2", params["sigma_x2"].value, params["sigma_y2"].value)
         print("Pluto: ", params["x_0p"].value, params["y_0p"].value)
         print("Charon: ", params["x_0c"].value, params["y_0c"].value)
         locations["x_p"].append(params["x_0p"].value)
         locations["y_p"].append(params["y_0p"].value)
         locations["x_c"].append(params["x_0c"].value)
         locations["y_c"].append(params["y_0c"].value)
-        distance = math.sqrt(
-            (params["x_0p"].value - params["x_0c"].value) ** 2
-            + (params["y_0p"].value - params["y_0c"].value) ** 2
-        )
-        locations["pixel_distance"].append(distance)
-        arcsecond_distance = distance = math.sqrt(
-            (
-                constants[config.date + config.index]["plate_scale_x"]
-                * (params["x_0p"].value - params["x_0c"].value)
-            )
-            ** 2
-            + (
-                constants[config.date + config.index]["plate_scale_y"]
-                * (params["y_0p"].value - params["y_0c"].value)
-            )
-            ** 2
-        )
-        locations["arcsecond_distance"].append(
-            arcsecond_distance
-        )
-        if config.do_pauses_for_gaussian:
-            input("Press enter to keep going")
+        locations["sigma_x2"].append(params["sigma_x2"].value)
+        locations["sigma_y2"].append(params["sigma_y2"].value)
+        locations["dx_pixel"].append(params["x_0p"].value - params["x_0c"].value)
+        locations["dy_pixel"].append(params["y_0p"].value - params["y_0c"].value)
+
     return locations
 
 

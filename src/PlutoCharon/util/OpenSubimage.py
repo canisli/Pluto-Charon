@@ -5,7 +5,13 @@ import os
 
 def main():
     os.system(
-        "open " + config.output_folder + config.date + "/" + config.date + config.index + "_PC_subimage.fits"
+        "open "
+        + config.output_folder
+        + config.date
+        + "/"
+        + config.date
+        + config.index
+        + "_PC_subimage.fits"
     )
 
 

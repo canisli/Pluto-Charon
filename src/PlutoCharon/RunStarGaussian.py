@@ -18,7 +18,9 @@ def main():
     image = Image(path)
     hdul = fits.open(path)
 
-    fwhm_arc = 3.5  # full width half maximum in arcseconds # based on location in Rhode Island
+    fwhm_arc = (
+        3.5  # full width half maximum in arcseconds # based on location in Rhode Island
+    )
     fwhm = (
         fwhm_arc / hdul[get_image_hdu_number(hdul)].header["CDELT1"]
     )  # fwhm in pixels
@@ -51,18 +53,15 @@ def main():
             ):
                 skip = True
         # stars that are too close to the border
-        if star.x < 11 or star.x > image.width - 11:
+        if star.x < 30 or star.x > image.width - 30:
             skip = True
-        if star.y < 11 or star.y > image.height - 11:
+        if star.y < 30 or star.y > image.height - 30:
             skip = True
         if skip:
-            if config.do_debugging_for_gaussian:
-                print("==================SKIPPED================")
             skip_count += 1
             continue
 
-        if config.do_debugging_for_gaussian:
-            print("<" + str(i + 1) + ">\n", str(starlist[i]))
+        print("<" + str(i + 1) + ">\n", str(starlist[i]))
         PSFSetupData = {}
         PSFSetupData["star_x"] = star.x
         PSFSetupData["star_y"] = star.y
@@ -86,9 +85,6 @@ def main():
         all_params["sigma_y2"].append(params["sigma_y2"].value)
         all_params["x"].append(star.x)
         all_params["y"].append(star.y)
-
-        if config.do_pauses_for_gaussian:
-            input("Press enter to keep going")
 
     print("\n\n" + "SUMMARY")
     print("Number of stars successfully analyzed:", len(starlist) - skip_count)
