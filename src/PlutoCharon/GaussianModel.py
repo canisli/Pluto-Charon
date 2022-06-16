@@ -94,13 +94,13 @@ class PlutoCharonGaussian(GaussianModel):
     def __init__(self, PSFSetupData):
         super().__init__(PSFSetupData)
         self.LMparams = Parameters()
-        self.LMparams.add("x_0p", value=self.PSFSetupData["x_0p"])
-        self.LMparams.add("y_0p", value=self.PSFSetupData["y_0p"])
-        self.LMparams.add("x_0c", value=self.PSFSetupData["x_0c"])
-        self.LMparams.add("y_0c", value=self.PSFSetupData["y_0c"])
+        self.LMparams.add("x_0p", value=self.PSFSetupData["x_0p"], min = 0, max=19)
+        self.LMparams.add("y_0p", value=self.PSFSetupData["y_0p"], min = 0, max=19)
+        self.LMparams.add("x_0c", value=self.PSFSetupData["x_0c"], min = 0, max=19)
+        self.LMparams.add("y_0c", value=self.PSFSetupData["y_0c"], min = 0, max=19)
         self.LMparams.add("a_p", value=self.PSFSetupData["init_Ap"])
         self.LMparams.add("a_c", value=self.PSFSetupData["init_Ac"])
-        self.LMparams.add("b", value=self.PSFSetupData["init_background"])
+        self.LMparams.add("b", value=self.PSFSetupData["init_background"], min=0)
         self.LMparams.add(
             "sigma_x2", value=self.PSFSetupData["sigma_x2"], min=1, max=100
         )

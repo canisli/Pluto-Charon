@@ -32,8 +32,8 @@ def main():
     PlutoCharonSetupData["subimage"].write_fits(
         config.output_folder + config.date + "/" + entry + "_PC_subimage"
     )
-    print("Using sigma_x2=", PlutoCharonSetupData["sigma_x2"])
-    print("Using sigma_y2=", PlutoCharonSetupData["sigma_y2"])
+    print("Guessing sigma_x2=", PlutoCharonSetupData["sigma_x2"])
+    print("Guessing sigma_y2=", PlutoCharonSetupData["sigma_y2"])
 
     locations = locate_pluto_charon(PlutoCharonSetupData)
     Table(locations).write(output_path, format="csv", overwrite=True)
