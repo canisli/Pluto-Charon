@@ -1,3 +1,7 @@
+############################
+# outdated, need to update #
+############################
+
 # Generate subimages from an image file
 # Useful for debugging GaussianModel
 # Assumes that a starlist.csv file has already been created in the same directory as the fits file
