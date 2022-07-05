@@ -9,10 +9,10 @@ from IStar import IStar
 
 
 def parse_file_name(file_name):
-    if file_name[-3:] == ".fz":
+    if file_name[-3:] == '.fz':
         return file_name
-    if file_name[-5:] != ".fits":
-        file_name += ".fits"
+    if file_name[-5:] != '.fits':
+        file_name += '.fits'
     return file_name
 
 
@@ -21,9 +21,9 @@ def get_image_hdu_number(hdul):
     Get index of ImageHDU from HDUList
     """
     for n in [0, 1]:
-        if "EXPOSURE" in hdul[n].header:
+        if 'EXPOSURE' in hdul[n].header:
             return n
-    print("get_image_hdu_number: Cannot find valid HDU keywords")
+    print('get_image_hdu_number: Cannot find valid HDU keywords')
     raise ValueError
 
 
@@ -41,25 +41,25 @@ def get_star_attribute(data, index):
     flag = data[9]
     if index == 0:  # star name
         if not (flag & 0x20):
-            return "N/A"
+            return 'N/A'
     if index == 1 or index == 2:  # X, Y
         if not (flag & 0x01):
-            return "N/A"
+            return 'N/A'
     if index == 3 or index == 4:  # DEC RA
         if not (flag & 0x010):
-            return "N/A"
+            return 'N/A'
     if index == 5:  # MAG
         if not (flag & 0x02):
-            return "N/A"
+            return 'N/A'
     if index == 6:  # BKGD
         if not (flag & 0x04):
-            return "N/A"
+            return 'N/A'
     if index == 7:  # COUNTS
         if not (flag & 0x08):
-            return "N/A"
+            return 'N/A'
     if index == 8:  # PHOTOMETRY
         if not (flag & 0x40):
-            return "N/A"
+            return 'N/A'
     return data[index]
 
 
@@ -91,7 +91,7 @@ class Image:
 
             # create 2D array full of zeros
             self.data = np.zeros((height, width))
-        print("Created " + str(self))
+        print('Created ' + str(self))
 
     def is_inside(self, x, y):
         if self.height is None or self.width is None:
@@ -118,13 +118,13 @@ class Image:
 
     def set_pixel(self, x, y, val):
         if not self.is_inside(x, y):
-            print("set_pixel: coordinate is out of range")
+            print('set_pixel: coordinate is out of range')
             raise IndexError
         self.data[y][x] = val
 
     def set_pixel_range(self, x1, y1, x2, y2, val):
         if not self.is_inside(x1, y1) or not self.is_inside(x2, y2):
-            print("set_pixel_range: coordinate is out of range")
+            print('set_pixel_range: coordinate is out of range')
             raise IndexError
         for x in range(x1, x2 + 1):  # draw a rectangle
             for y in range(y1, y2 + 1):
@@ -143,7 +143,7 @@ class Image:
         if file_name_string is None:
             if not self.based_on_existing_file:
                 print(
-                    "write_fits: Image is not based on existing file. A specified file name is required"
+                    'write_fits: Image is not based on existing file. A specified file name is required'
                 )
                 raise ValueError
             else:  # overwrite existing file
@@ -156,12 +156,12 @@ class Image:
             if self.based_on_existing_file:
                 with fits.open(self.file_name) as hdul:
                     hdul[get_image_hdu_number(hdul)].data = self.data
-                    hdul[get_image_hdu_number(hdul)].header["EXPOSURE"] = 0
+                    hdul[get_image_hdu_number(hdul)].header['EXPOSURE'] = 0
                     hdul.writeto(file_name_string, overwrite=True)
             else:
                 primary_hdu = fits.PrimaryHDU()
                 image_hdu = fits.ImageHDU(self.data.tolist())
-                image_hdu.header["EXPOSURE"] = 0
+                image_hdu.header['EXPOSURE'] = 0
                 new_hdul = fits.HDUList([primary_hdu, image_hdu])
                 self.file_name = parse_file_name(file_name_string)
                 new_hdul.writeto(self.file_name, overwrite=True)
@@ -174,7 +174,7 @@ class Image:
             try:
                 return hdul[get_image_hdu_number(hdul)].header[name.upper()]
             except KeyError:
-                print("ERROR: Keyword '" + str(name) + "' not found")
+                print('ERROR: Keyword ' ' + str(name) + ' ' not found')
 
     def get_stars(self):
         """
@@ -200,14 +200,14 @@ class Image:
 
     def save_starlist(self, out_path):
         stars = self.get_stars()
-        output = {"name": [], "x": [], "y": [], "mag": [], "counts": []}
+        output = {'name': [], 'x': [], 'y': [], 'mag': [], 'counts': []}
         for star in stars:
-            output["name"].append(star.star_name)
-            output["x"].append(star.x)
-            output["y"].append(star.y)
-            output["mag"].append(star.magnitude)
-            output["counts"].append(star.counts)
-        Table(output).write(out_path, format="csv", overwrite=True)
+            output['name'].append(star.star_name)
+            output['x'].append(star.x)
+            output['y'].append(star.y)
+            output['mag'].append(star.magnitude)
+            output['counts'].append(star.counts)
+        Table(output).write(out_path, format='csv', overwrite=True)
 
     def plot_intensity_profile(self, center_x, center_y):
         distance_from_star = []  # x
@@ -217,24 +217,17 @@ class Image:
                 if self.is_inside(x, y):
                     distance_from_star.append(distance(x, y, center_x, center_y))
                     values.append(self.get_pixel(x, y))
-        plt.plot(distance_from_star, values, "o")
-        plt.xlabel("Distance to star")
-        plt.ylabel("Pixel Value")
-        plt.savefig(self.file_name[0:-5] + "_graph.png")
+        plt.plot(distance_from_star, values, 'o')
+        plt.xlabel('Distance to star')
+        plt.ylabel('Pixel Value')
+        plt.savefig(self.file_name[0:-5] + '_graph.png')
         plt.show()
 
     def __str__(self):
         if self.file_name is not None:
-            return (
-                "Image "
-                + str(self.file_name)
-                + ": "
-                + str(self.width)
-                + " x "
-                + str(self.height)
-            )
+            return f'Image {self.file_name}: {self.width} x {self.height}'
         else:
-            return "Image: " + str(self.width) + " x " + str(self.height)
+            return f'Image: {self.width} x {self.height}'
 
     def __del__(self):
-        print("Destroyed " + str(self))
+        print(f'Destroyed {self}')

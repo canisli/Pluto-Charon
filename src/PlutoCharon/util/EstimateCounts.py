@@ -4,5 +4,11 @@ from Image import Image
 from res import config
 from res.constants import constants
 
-i = Image(config.output_folder + config.date + "/" + config.date + config.index + "_PC_subimage.fits")
-print((i.get_average_pixel_value()-constants[config.date + config.index]["background"])*17*17)
+i = Image(
+    f'{config.output_folder}/{config.date}/{config.date}{config.index}_PC_subimage.fits'
+)
+print(
+    (i.get_average_pixel_value() - constants[config.date + config.index]['background'])
+    * 17
+    * 17
+)

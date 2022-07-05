@@ -14,9 +14,8 @@ y_c = 5.8357916026729475
 
 
 path = (
-    config.output_folder + config.date + "/" + config.date + config.index + "_PC_subimage.fits"
-)  # subimage
-print(path)
+    f'{config.output_folder}/{config.date}/{config.date}{config.index}_PC_subimage.fits'
+)
 img = Image(path)
 plt.figure(figsize=(8, 8))
 display_image = img.data.astype(float)
@@ -28,9 +27,9 @@ vmax = 580
 display_image[display_image < min_clip] = (
     min_clip + 1
 )  # will remove the 'static' of white dots
-plt.imshow(display_image, norm=LogNorm(vmin=min_clip, vmax=vmax), cmap="Greys_r")
+plt.imshow(display_image, norm=LogNorm(vmin=min_clip, vmax=vmax), cmap='Greys_r')
 
-plt.scatter([x_c, x_p], [y_c, y_p], facecolors="none", edgecolors=["b", "r"])
+plt.scatter([x_c, x_p], [y_c, y_p], facecolors='none', edgecolors=['b', 'r'])
 ax = plt.gca()
 ax.invert_yaxis()
 plt.show()

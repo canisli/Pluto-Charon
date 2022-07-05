@@ -4,10 +4,8 @@ import os
 
 
 def main():
-    os.system(
-        "open " + config.data_folder + config.date + "/pluto" + config.index + ".fits"
-    )
+    os.system(f'open {config.data_folder}/{config.date}/pluto{config.index}.fits')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

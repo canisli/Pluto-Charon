@@ -63,7 +63,7 @@ constants = {
         # Pluto Charon
         "sigma_x2": 19.107172818638194,
         "sigma_y2": 19.107172818638194,
-        "blob_center_x": 2585.5, 
+        "blob_center_x": 2585.5,
         "blob_center_y": 2094.3,
         "pluto_charon_counts": 34483,
         "background": 500,
@@ -80,7 +80,7 @@ constants = {
         # Pluto Charon
         "sigma_x2": 19.107172818638194,
         "sigma_y2": 19.107172818638194,
-        "blob_center_x": 2589.0, 
+        "blob_center_x": 2589.0,
         "blob_center_y": 2094.1,
         "pluto_charon_counts": 36860,
         "background": 500,
@@ -96,7 +96,7 @@ constants = {
         # Pluto Charon
         "sigma_x2": 19.107172818638194,
         "sigma_y2": 19.107172818638194,
-        "blob_center_x": 2592.7, 
+        "blob_center_x": 2592.7,
         "blob_center_y": 2100.9,
         "pluto_charon_counts": 38310,
         "background": 500,
@@ -112,7 +112,7 @@ constants = {
         # Pluto Charon
         "sigma_x2": 19.107172818638194,
         "sigma_y2": 19.107172818638194,
-        "blob_center_x": 2593.5,  
+        "blob_center_x": 2593.5,
         "blob_center_y": 2100.4,
         "pluto_charon_counts": 39241,
         "background": 500,
@@ -128,7 +128,7 @@ constants = {
         # Pluto Charon
         "sigma_x2": 19.107172818638194,
         "sigma_y2": 19.107172818638194,
-        "blob_center_x": 2595.1,  
+        "blob_center_x": 2595.1,
         "blob_center_y": 2099.7,
         "pluto_charon_counts": 38745,
         "background": 500,
@@ -144,7 +144,7 @@ constants = {
         # Pluto Charon
         "sigma_x2": 19.107172818638194,
         "sigma_y2": 19.107172818638194,
-        "blob_center_x": 2589.0, 
+        "blob_center_x": 2589.0,
         "blob_center_y": 2094.1,
         "pluto_charon_counts": 36860,
         "background": 500,
@@ -160,7 +160,7 @@ constants = {
         # Pluto Charon
         "sigma_x2": 19.107172818638194,
         "sigma_y2": 19.107172818638194,
-        "blob_center_x": 2589.0, 
+        "blob_center_x": 2589.0,
         "blob_center_y": 2094.1,
         "pluto_charon_counts": 36860,
         "background": 500,
@@ -176,7 +176,7 @@ constants = {
         # Pluto Charon
         "sigma_x2": 19.107172818638194,
         "sigma_y2": 19.107172818638194,
-        "blob_center_x": 2589.0, 
+        "blob_center_x": 2589.0,
         "blob_center_y": 2094.1,
         "pluto_charon_counts": 36860,
         "background": 500,
@@ -202,7 +202,8 @@ constants = {
         "pluto": "300.43595 -22.59690",
         "charon": "300.43572 -22.59693",
         "date_obs": "2022-06-10T06:11:33.0",
-    },"6-9-2022_K": {
+    },
+    "6-9-2022_K": {
         "plate_scale_x": 0.34,
         "plate_scale_y": 0.34,
         # Pluto Charon
@@ -212,7 +213,7 @@ constants = {
         "blob_center_y": 2094.4,
         "pluto_charon_counts": 37617,
         "background": 500,
-        "init_Ap_coeff": 0.844, 
+        "init_Ap_coeff": 0.844,
         "init_Ac_coeff": 0.156,
         # ephemeris
         "pluto": "300.43588 -22.59692",

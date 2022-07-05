@@ -5,15 +5,9 @@ import os
 
 def main():
     os.system(
-        "open "
-        + config.output_folder
-        + config.date
-        + "/"
-        + config.date
-        + config.index
-        + "_PC_subimage.fits"
+        f'open {config.output_folder}/{config.date}/{config.date}{config.index}_PC_subimage.fits'
     )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
