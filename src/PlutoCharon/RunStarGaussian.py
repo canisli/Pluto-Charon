@@ -1,3 +1,6 @@
+import logging
+import sys
+
 from astropy.io import fits
 from astropy.table import Table
 import numpy as np
@@ -7,30 +10,30 @@ from Image import Image, get_image_hdu_number, distance
 from IStar import IStar
 from res import config
 
+log = logging.getLogger('RunStarGaussian')
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+
 
 def main():
     path = f'{config.data_folder}/{config.date}/pluto{config.index}.fits'
-    starlist_path = f'{config.data_folder}/{config.date}/starlist{config.index}.csv'
+    starlist_path = f'{config.data_folder}/{config.date}/starlist{config.index}.ascii'
 
     starlist = Table.read(starlist_path, format='csv')
     output_path = (
-        f'{config.output_folder}/{config.date}/gaussian_results{config.index}.csv'
+        f'{config.output_folder}/{config.date}/gaussian_results{config.index}.ascii'
     )
 
     image = Image(path)
     hdul = fits.open(path)
+    
+    # full width half maximum in arcseconds (based on location in Rhode Island)
+    fwhm_arc = 3.5 
+    fwhm = fwhm_arc / hdul[get_image_hdu_number(hdul)].header['CDELT1']  
 
-    fwhm_arc = (
-        3.5  # full width half maximum in arcseconds # based on location in Rhode Island
-    )
-    fwhm = (
-        fwhm_arc / hdul[get_image_hdu_number(hdul)].header['CDELT1']
-    )  # fwhm in pixels
-
-    all_params = {  # dict for all the stars
+    all_params = {
         'star': [],
         'a': [],
-        'b': [],
+        'bg': [],
         'sigma_x2': [],
         'sigma_y2': [],
         'x': [],
@@ -63,7 +66,7 @@ def main():
             skip_count += 1
             continue
 
-        print(f'<{i + 1}> \n {starlist[i]}')
+        log.info(f'<{i + 1}> \n {starlist[i]}')
         PSFSetupData = {}
         PSFSetupData['star_x'] = star.x
         PSFSetupData['star_y'] = star.y
@@ -82,25 +85,25 @@ def main():
         params = gm.get_params()
         all_params['star'].append(star.star_name)
         all_params['a'].append(params['a'].value)
-        all_params['b'].append(params['b'].value)
+        all_params['bg'].append(params['bg'].value)
         all_params['sigma_x2'].append(params['sigma_x2'].value)
         all_params['sigma_y2'].append(params['sigma_y2'].value)
         all_params['x'].append(star.x)
         all_params['y'].append(star.y)
 
-    print('\n\n' + 'SUMMARY')
-    print(f'Number of stars successfully analyzed: {len(starlist)- skip_count}')
-    print(
+    log.info('\n\n' + 'SUMMARY')
+    log.info(f'Number of stars successfully analyzed: {len(starlist)- skip_count}')
+    log.info(
         'Average sigma_x2',
         str(np.average([x for x in all_params['sigma_x2'] if x < 10])),
     )
-    print(
+    log.info(
         'Average sigma_y2',
         str(np.average([y for y in all_params['sigma_y2'] if y < 10])),
     )
 
-    Table(all_params).write(output_path, format='csv', overwrite=True)
-    print(f'Wrote to file: {output_path}')
+    Table(all_params).write(output_path, format='ascii.fixed_width_two_line', overwrite=True)
+    log.info(f'Wrote to file: {output_path}')
 
 
 if __name__ == '__main__':

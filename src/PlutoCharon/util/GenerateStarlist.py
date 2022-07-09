@@ -3,11 +3,12 @@ from res import config
 
 
 def main():
-    path = config.data_folder + config.date + '/pluto' + config.index + '.fits'
-    image = Image(path)
-    image.save_starlist(
-        config.data_folder + config.date + '/starlist' + config.index + '.csv'
-    )
+    image_path = f'{config.data_folder}/{config.date}/pluto{config.index}.fits'
+    image = Image(image_path)
+    
+    output = f'{config.data_folder}/{config.date}/starlist{config.index}.ascii'
+    image.save_starlist(output)
+    print(f'Wrote starlist to {output}')
 
 
 if __name__ == '__main__':

@@ -1,4 +1,6 @@
 import math
+import logging
+import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,6 +8,9 @@ from astropy.io import fits
 from astropy.table import Table
 
 from IStar import IStar
+
+log = logging.getLogger('Image')
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
 def parse_file_name(file_name):
@@ -23,7 +28,7 @@ def get_image_hdu_number(hdul):
     for n in [0, 1]:
         if 'EXPOSURE' in hdul[n].header:
             return n
-    print('get_image_hdu_number: Cannot find valid HDU keywords')
+    log.info('get_image_hdu_number: Cannot find valid HDU keywords')
     raise ValueError
 
 
@@ -91,7 +96,7 @@ class Image:
 
             # create 2D array full of zeros
             self.data = np.zeros((height, width))
-        print('Created ' + str(self))
+        log.debug('Created ' + str(self))
 
     def is_inside(self, x, y):
         if self.height is None or self.width is None:
@@ -118,13 +123,13 @@ class Image:
 
     def set_pixel(self, x, y, val):
         if not self.is_inside(x, y):
-            print('set_pixel: coordinate is out of range')
+            log.info('set_pixel: coordinate is out of range')
             raise IndexError
         self.data[y][x] = val
 
     def set_pixel_range(self, x1, y1, x2, y2, val):
         if not self.is_inside(x1, y1) or not self.is_inside(x2, y2):
-            print('set_pixel_range: coordinate is out of range')
+            log.info('set_pixel_range: coordinate is out of range')
             raise IndexError
         for x in range(x1, x2 + 1):  # draw a rectangle
             for y in range(y1, y2 + 1):
@@ -142,7 +147,7 @@ class Image:
 
         if file_name_string is None:
             if not self.based_on_existing_file:
-                print(
+                log.info(
                     'write_fits: Image is not based on existing file. A specified file name is required'
                 )
                 raise ValueError
@@ -174,7 +179,7 @@ class Image:
             try:
                 return hdul[get_image_hdu_number(hdul)].header[name.upper()]
             except KeyError:
-                print('ERROR: Keyword ' ' + str(name) + ' ' not found')
+                log.info('ERROR: Keyword ' ' + str(name) + ' ' not found')
 
     def get_stars(self):
         """
@@ -207,7 +212,7 @@ class Image:
             output['y'].append(star.y)
             output['mag'].append(star.magnitude)
             output['counts'].append(star.counts)
-        Table(output).write(out_path, format='csv', overwrite=True)
+        Table(output).write(out_path, format='ascii.fixed_width_two_line', overwrite=True)
 
     def plot_intensity_profile(self, center_x, center_y):
         distance_from_star = []  # x
@@ -230,4 +235,4 @@ class Image:
             return f'Image: {self.width} x {self.height}'
 
     def __del__(self):
-        print(f'Destroyed {self}')
+        log.debug(f'Destroyed {self}')
