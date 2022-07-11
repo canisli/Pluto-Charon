@@ -1,6 +1,6 @@
 # estimate the counts of pluto and charon
 
-from Image import Image
+from image import Image
 from res import config
 from res.constants import constants
 

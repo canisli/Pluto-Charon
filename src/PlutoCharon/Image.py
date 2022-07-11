@@ -7,9 +7,9 @@ import numpy as np
 from astropy.io import fits
 from astropy.table import Table
 
-from IStar import IStar
+from istar import IStar
 
-log = logging.getLogger('Image')
+log = logging.getLogger('image')
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
@@ -105,6 +105,9 @@ class Image:
             return False
         return True
 
+    def max_pixel(self):
+        return np.max(self.data)
+
     def get_pixel(self, x, y):
         return self.data[y][x]  # 0 indexed
 
@@ -112,8 +115,8 @@ class Image:
         center_x = int(center_x)
         center_y = int(center_y)
         subimage = Image(width=subimage_width, height=subimage_height)
-        for x in range(-int(subimage_width / 2), int(subimage_width / 2) + 1):
-            for y in range(-int(subimage_height / 2), int(subimage_height / 2) + 1):
+        for x in range(-int(subimage_width / 2), int((subimage_width+1) / 2)):
+            for y in range(-int(subimage_height / 2), int((subimage_height+1) / 2)):
                 subimage.set_pixel(
                     (int)(subimage_width / 2) + x,
                     (int)(subimage_height / 2) + y,

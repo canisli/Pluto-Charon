@@ -1,6 +1,6 @@
 from astropy.io import fits
 
-import Image
+import image
 from res import config
 
 hdul = fits.open(config.data_folder + config.date + '/pluto' + config.index + '.fits')

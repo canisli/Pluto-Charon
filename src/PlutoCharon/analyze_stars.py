@@ -5,12 +5,12 @@ from astropy.io import fits
 from astropy.table import Table
 import numpy as np
 
-from GaussianModel import StarGaussian
-from Image import Image, get_image_hdu_number, distance
-from IStar import IStar
+from gaussian_model import StarGaussian
+from image import Image, get_image_hdu_number, distance
+from istar import IStar
 from res import config
 
-log = logging.getLogger('RunStarGaussian')
+log = logging.getLogger('stars')
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
