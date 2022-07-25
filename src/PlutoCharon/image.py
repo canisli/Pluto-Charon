@@ -115,8 +115,8 @@ class Image:
         center_x = int(center_x)
         center_y = int(center_y)
         subimage = Image(width=subimage_width, height=subimage_height)
-        for x in range(-int(subimage_width / 2), int((subimage_width+1) / 2)):
-            for y in range(-int(subimage_height / 2), int((subimage_height+1) / 2)):
+        for x in range(-int(subimage_width / 2), int((subimage_width + 1) / 2)):
+            for y in range(-int(subimage_height / 2), int((subimage_height + 1) / 2)):
                 subimage.set_pixel(
                     (int)(subimage_width / 2) + x,
                     (int)(subimage_height / 2) + y,
@@ -215,7 +215,9 @@ class Image:
             output['y'].append(star.y)
             output['mag'].append(star.magnitude)
             output['counts'].append(star.counts)
-        Table(output).write(out_path, format='ascii.fixed_width_two_line', overwrite=True)
+        Table(output).write(
+            out_path, format='ascii.fixed_width_two_line', overwrite=True
+        )
 
     def plot_intensity_profile(self, center_x, center_y):
         distance_from_star = []  # x

@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 log = logging.getLogger('gaussian')
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
+
 def psf(x, y, sigma_x, sigma_y, angle, peak, background):
     cosa = math.cos(angle)
     sina = math.sin(angle)
@@ -20,21 +21,34 @@ def psf(x, y, sigma_x, sigma_y, angle, peak, background):
         )
     )
 
+
 class GaussianModel:
     """
     Superclass for running least squares fitting on PSF function
     """
-    
-    def __init__(self, psf_setup_data):
-        self.psf_setup_data = psf_setup_data
 
-    def get_params(self):
+    def __init__(self, psfinit, image):
+        self.psfinit = psfinit
+        self.image = image
+        self.LMparams = Parameters()
+        for param in psfinit:
+            self.LMparams.add(param, psfinit[param], vary=False)
+    
+    def set_vary(self, params_to_vary):
+        for p in params_to_vary:
+            self.LMparams[p].vary = True
+
+    def set_limits(self, param, min, max):
+        self.LMparams[param].min = min
+        self.LMparams[param].max = max
+
+    def run_minimizer(self, method='least_squares'):
         self.LMFitResult = minimize(
             self.psf_error,
             self.LMparams,
             args=(),
-            method='least_squares',
-            max_nfev=90000, #14000,
+            method=method,
+            max_nfev=14000,
         )
         return self.LMFitResult.params
 
@@ -42,9 +56,11 @@ class GaussianModel:
         pass
 
     def psf_error(self, LMparams):
-        errors = [self.image.get_pixel(x, y) - self.psf(LMparams, x, y) 
-                  for x in range(self.image.width)
-                  for y in range(self.image.height)]
+        errors = [
+            self.image.get_pixel(x, y) - self.psf(LMparams, x, y)
+            for x in range(self.image.width)
+            for y in range(self.image.height)
+        ]
         return errors
 
     def get_result(self):
@@ -53,77 +69,28 @@ class GaussianModel:
 
 # Single Gaussian Model for stars in the image
 # Estimates A, B, sigma_x2, sigma_y2, and the center of the star
-class StarGaussian(GaussianModel):
-    def __init__(self, psf_setup_data):
-        super().__init__(psf_setup_data)
-        center_x = self.psf_setup_data['star_x']
-        center_y = self.psf_setup_data['star_y']
-        self.image = self.psf_setup_data['image']
-        a = np.max(
-            [  # four pixels around center
-                self.image.get_pixel(math.floor(center_x), math.floor(center_y)),
-                self.image.get_pixel(math.ceil(center_x), math.floor(center_y)),
-                self.image.get_pixel(math.floor(center_x), math.ceil(center_y)),
-                self.image.get_pixel(math.ceil(center_x), math.ceil(center_y)),
-            ]
-        )
-        sigma = (psf_setup_data['fwhm'] / 2.355)
-
-        self.LMparams = Parameters()
-        self.LMparams.add('xc', value=psf_setup_data['subimage'].width / 2 - 0.5)
-        self.LMparams.add('yc', value=psf_setup_data['subimage'].height / 2 - 0.5)
-        self.LMparams.add('a', value=a)
-        self.LMparams.add('bg', value=psf_setup_data['avg_pixel_val'])
-        self.LMparams.add('sigma_x', value=sigma)
-        self.LMparams.add('sigma_y', value=sigma)
-
-    def get_params(self):
-        return super().get_params()
-
+class SingleGaussian(GaussianModel):
     def psf(self, LMparams, x, y):
         a = LMparams['a']
-        b = LMparams['bg']
+        bg = LMparams['bg']
         xc = LMparams['xc']
         yc = LMparams['yc']
         sigma_x = LMparams['sigma_x']
         sigma_y = LMparams['sigma_y']
-        return psf(x-xc, y-yc, sigma_x, sigma_y, 0, a, b)
+        theta = LMparams['theta'].value
+        return psf(x - xc, y - yc, sigma_x, sigma_y, theta, a, bg)
 
 
 class DoubleGaussian(GaussianModel):
     """
     Double Gaussian Model for Pluto Charon blob
-    Solves for coordinates of Pluto and Charon, amplitude of their PSFs, 
+    Solves for coordinates of Pluto and Charon, amplitude of their PSFs,
         background, and ellipse orientation angle
     """
-    def __init__(self, psf_setup_data):
-        super().__init__(psf_setup_data)
-        self.LMparams = Parameters()
-        self.image = self.psf_setup_data['image']
-        self.LMparams.add('x_p', value=self.psf_setup_data['x_p'], min=0, max=self.image.width)
-        self.LMparams.add('y_p', value=self.psf_setup_data['y_p'], min=0, max=self.image.height)
-        self.LMparams.add('dx', value=self.psf_setup_data['dx'], min=-10, max=10)
-        self.LMparams.add('dy', value=self.psf_setup_data['dy'], min=-10, max=10)
-        self.LMparams.add('a_p', value=self.psf_setup_data['init_Ap'], min=10, max=1000)
-        self.LMparams.add('a_c', value=self.psf_setup_data['init_Ac'], min=10, max=1000)
-        self.LMparams.add('bg', value=self.psf_setup_data['init_background'], min=400, max=600)
-        self.LMparams.add('theta', value=self.psf_setup_data['theta'])
-        self.LMparams.add(
-            'sigma_x', value=self.psf_setup_data['sigma_x'], vary=True, min=1, max=100
-        )
-        self.LMparams.add(
-            'sigma_y', value=self.psf_setup_data['sigma_y'], vary=True, min=1, max=100
-        )
-
-    def get_params(self):
-        """
-        Returns all seven params {x_c, y_c, x_p,y_p, A_p, A_c, bg, theta}
-        """
-        return super().get_params()
 
     def psf(self, LMparams, x, y):
-        a_c = LMparams['a_c']
         a_p = LMparams['a_p']
+        a_c = a_p * LMparams['rel_flux']
         bg = LMparams['bg']
         sigma_x = LMparams['sigma_x']
         sigma_y = LMparams['sigma_y']
@@ -134,13 +101,16 @@ class DoubleGaussian(GaussianModel):
         dy = LMparams['dy']
 
         return (
-            bg + psf(x-x_p, y-y_p, sigma_x, sigma_y, theta, a_p, 0)
-              + psf(x-x_p+dx, y-y_p+dy, sigma_x, sigma_y, theta, a_c, 0)
+            bg
+            + psf(x - x_p, y - y_p, sigma_x, sigma_y, theta, a_p, 0)
+            + psf(x - x_p + dx, y - y_p + dy, sigma_x, sigma_y, theta, a_c, 0)
         )
+
 
 def get_params_from_file(file_path):
     fittings = Table.read(file_path, format='ascii.fixed_width_two_line')
     return fittings
+
 
 def plot_params(fittings, center_x, center_y):
     # deprecated

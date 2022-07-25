@@ -25,10 +25,10 @@ def main():
 
     image = Image(path)
     hdul = fits.open(path)
-    
+
     # full width half maximum in arcseconds (based on location in Rhode Island)
-    fwhm_arc = 3.5 
-    fwhm = fwhm_arc / hdul[get_image_hdu_number(hdul)].header['CDELT1']  
+    fwhm_arc = 3.5
+    fwhm = fwhm_arc / hdul[get_image_hdu_number(hdul)].header['CDELT1']
 
     all_params = {
         'star': [],
@@ -50,7 +50,8 @@ def main():
             if star.counts < 0:
                 skip = True
         for j in range(len(starlist)):
-            # ignore stars that are within certain amount of pixels of the current star to avoid interference
+            # ignore stars that are within certain amount of pixels of the current star 
+            # to avoid interference
             star2 = IStar(table_row=starlist[j])
             if (
                 i != j
@@ -67,22 +68,24 @@ def main():
             continue
 
         log.info(f'<{i + 1}> \n {starlist[i]}')
-        PSFSetupData = {}
-        PSFSetupData['star_x'] = star.x
-        PSFSetupData['star_y'] = star.y
-        PSFSetupData['orig_image'] = image
-        PSFSetupData['subimage'] = PSFSetupData['orig_image'].subimage(
+        psf_setup_data = {}
+        psf_setup_data['star_x'] = star.x
+        psf_setup_data['star_y'] = star.y
+        psf_setup_data['image'] = image
+        psf_setup_data['subimage'] = psf_setup_data['orig_image'].subimage(
             star.x + 1,
             star.y + 1,
             19,
             19,
         )
-        PSFSetupData['fwhm'] = fwhm
-        PSFSetupData['avg_pixel_val'] = image.get_average_pixel_value()
+        psf_setup_data['fwhm'] = fwhm
+        psf_setup_data['bg'] = image.get_average_pixel_value()
+        psf_setup_data['a'] = np.max(image.data) - psf_setup_data['bg']
+        psf_setup_data['sigma'] = psf_setup_data['fwhm'] / 2.355
 
-        gm = StarGaussian(PSFSetupData)
+        gm = SingleGaussian(psf_setup_data)
 
-        params = gm.get_params()
+        params = gm.run_minimizer()
         all_params['star'].append(star.star_name)
         all_params['a'].append(params['a'].value)
         all_params['bg'].append(params['bg'].value)
@@ -91,7 +94,7 @@ def main():
         all_params['x'].append(star.x)
         all_params['y'].append(star.y)
 
-    log.info('\n\n' + 'SUMMARY')
+    log.info('\nSUMMARY')
     log.info(f'Number of stars successfully analyzed: {len(starlist)- skip_count}')
     log.info(
         'Average sigma_x2',
@@ -102,7 +105,9 @@ def main():
         str(np.average([y for y in all_params['sigma_y2'] if y < 10])),
     )
 
-    Table(all_params).write(output_path, format='ascii.fixed_width_two_line', overwrite=True)
+    Table(all_params).write(
+        output_path, format='ascii.fixed_width_two_line', overwrite=True
+    )
     log.info(f'Wrote to file: {output_path}')
 
 
