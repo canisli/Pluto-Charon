@@ -1,28 +1,19 @@
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 
-from res import config
-from res.constants import *
+plate_scale = .34
 
+# 6-9-2022
+pluto = SkyCoord('300.43646 -22.59674', unit=(u.deg, u.deg), frame='icrs')
+charon = SkyCoord('300.43624 -22.59677', unit=(u.deg, u.deg), frame='icrs')
 
-# Calculate angular separation between pluto and charon and determine the distance in pixels between them
-for index in config.indices:
-    entry = constants[config.date + index]
-    plate_scale_x = entry['plate_scale_x']  # arcseconds per pixel
-    plate_scale_y = entry['plate_scale_y']  # arcseconds per pixel
+# 7-7-2022
+pluto = SkyCoord('299.82808 -22.76706', unit=(u.deg, u.deg), frame='icrs')
+charon = SkyCoord('299.82820 -22.76691', unit=(u.deg, u.deg), frame='icrs')
 
-    pluto = SkyCoord(entry['pluto'], unit=(u.deg, u.deg), frame='icrs')
-    charon = SkyCoord(entry['charon'], unit=(u.deg, u.deg), frame='icrs')
-
-    # sep = pluto.separation(charon)
-    # pixel_sep = pluto.separation(charon).arcsecond/plate_scale
-
-    print(
-        f'From Horizons System Ephermeris: {config.date}{config.index} at {entry["date_obs"]}'
-    )
-    print(
-        f'x separation should be {(pluto.ra - charon.ra).arcsec} arcsec =  {-(pluto.ra - charon.ra).arcsec / plate_scale_x} pixels'
-    )
-    print(
-        f'x separation should be {(pluto.dec - charon.dec).arcsec} arcsec =  {-(pluto.dec- charon.dec).arcsec / plate_scale_y} pixels'
-    )
+print(
+    f'Pluto is {(pluto.ra - charon.ra).arcsec} arcsec =  {(pluto.ra - charon.ra).arcsec / plate_scale} pixels to the right of Charon'
+)
+print(
+    f'Pluto is {(pluto.dec - charon.dec).arcsec} arcsec =  {(pluto.dec- charon.dec).arcsec / plate_scale} pixels above Charon'
+)
